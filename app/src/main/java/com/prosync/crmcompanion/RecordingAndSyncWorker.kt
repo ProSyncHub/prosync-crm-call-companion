@@ -77,7 +77,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("recording_status", call.recordingStatus.lowercase())
                 put("recording_file_name", call.recordingName ?: "")
                 put("recording_match_confidence", if (call.recordingUri == null) "none" else "high")
-                put("app_version", "0.4.0-capture-control")
+                put("app_version", "0.5.0-employee-verification")
             }
             text("payload", payload.toString())
             call.recordingUri?.let { uriValue ->

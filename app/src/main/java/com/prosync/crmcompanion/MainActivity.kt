@@ -27,6 +27,7 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
     private lateinit var settings: SettingsStore
     private var employees: List<EmployeeOption> = emptyList()
+    private var pendingEmployee: EmployeeOption? = null
 
     data class EmployeeOption(val id: String, val name: String, val email: String, val department: String) {
         override fun toString() = "$name • $department"
@@ -44,11 +45,13 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.syncEmployeesButton).setOnClickListener { syncEmployees() }
         findViewById<AutoCompleteTextView>(R.id.employeeName).setOnItemClickListener { parent, _, position, _ ->
             val selected = parent.getItemAtPosition(position) as EmployeeOption
-            settings.activeEmployee = selected.name
-            settings.activeEmployeeId = selected.id
-            settings.activeEmployeeEmail = selected.email
-            if (settings.shiftActive) ActiveUserNotification.show(this)
+            pendingEmployee = selected
+            findViewById<EditText>(R.id.employeePassword).setText("")
+            findViewById<TextView>(R.id.employeeVerificationStatus).text =
+                "Selected ${selected.name}. Enter the CRM / Workforce password to verify."
         }
+        findViewById<Button>(R.id.verifyEmployeeButton).setOnClickListener { verifyEmployee() }
+        findViewById<Button>(R.id.clearEmployeeButton).setOnClickListener { clearEmployee() }
 
         findViewById<Button>(R.id.permissionsButton).setOnClickListener {
             val requested = mutableListOf(
@@ -72,24 +75,17 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val employeeField = findViewById<AutoCompleteTextView>(R.id.employeeName)
-            val selected = employees.firstOrNull { it.toString() == employeeField.text.toString() || it.name.equals(employeeField.text.toString(), true) }
-                ?: if (settings.activeEmployee.isNotBlank() && settings.activeEmployee.equals(employeeField.text.toString(), true)) {
-                    EmployeeOption(settings.activeEmployeeId, settings.activeEmployee, settings.activeEmployeeEmail, "saved")
-                } else null
-            if (selected == null || selected.email.isBlank()) {
-                employeeField.error = "Select an employee synced from CRM"
+            val apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString().trim()
+            val apiKey = findViewById<EditText>(R.id.apiKey).text.toString().trim()
+            if (apiBaseUrl.isBlank() || apiKey.isBlank()) {
+                findViewById<EditText>(R.id.apiBaseUrl).error = "CRM URL and mobile API key are required"
                 return@setOnClickListener
             }
-            val employee = selected.name
             val deviceLabel = findViewById<EditText>(R.id.deviceLabel).text.toString().trim()
 
-            settings.activeEmployee = employee
-            settings.activeEmployeeId = selected.id
-            settings.activeEmployeeEmail = selected.email
             settings.deviceLabel = deviceLabel
-            settings.apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString()
-            settings.apiKey = findViewById<EditText>(R.id.apiKey).text.toString()
+            settings.apiBaseUrl = apiBaseUrl
+            settings.apiKey = apiKey
             settings.shiftActive = true
             settings.shiftStartedAt = System.currentTimeMillis()
             settings.trackingStartedAt = settings.shiftStartedAt
@@ -146,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         val captureButton = findViewById<Button>(R.id.captureToggleButton)
         captureStatus.text = if (settings.shiftActive) {
             ActiveUserNotification.show(this)
-            "CAPTURE ON\n${settings.activeEmployee}\nSince ${df.format(Date(settings.shiftStartedAt))}"
+            "CAPTURE ON\n${settings.activeEmployee.ifBlank { "UNASSIGNED — select and verify an employee" }}\nSince ${df.format(Date(settings.shiftStartedAt))}"
         } else {
             "CAPTURE OFF\nNo call history, recording, or upload will be created."
         }
@@ -159,6 +155,11 @@ class MainActivity : AppCompatActivity() {
         )
         findViewById<Button>(R.id.syncButton).isEnabled = settings.shiftActive
         findViewById<Button>(R.id.recoveryScanButton).isEnabled = settings.shiftActive
+        findViewById<TextView>(R.id.employeeVerificationStatus).text = if (settings.activeEmployee.isBlank()) {
+            "No verified employee. Calls captured while ON will be saved as UNASSIGNED."
+        } else {
+            "Verified employee: ${settings.activeEmployee}"
+        }
 
         val db = CallDb(this)
         val latest = db.latest(30)
@@ -198,6 +199,82 @@ class MainActivity : AppCompatActivity() {
                 .onFailure { button.text = "Sync Failed: ${it.message}" }
             button.isEnabled = true
         }
+    }
+
+    private fun verifyEmployee() {
+        settings.apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString()
+        settings.apiKey = findViewById<EditText>(R.id.apiKey).text.toString()
+        val selected = pendingEmployee ?: employees.firstOrNull {
+            it.name.equals(findViewById<AutoCompleteTextView>(R.id.employeeName).text.toString(), true)
+        }
+        val passwordField = findViewById<EditText>(R.id.employeePassword)
+        val password = passwordField.text.toString()
+        val status = findViewById<TextView>(R.id.employeeVerificationStatus)
+        if (selected == null) {
+            status.text = "Load and select an employee first."
+            return
+        }
+        if (password.isBlank()) {
+            passwordField.error = "Enter the employee's CRM / Workforce password"
+            return
+        }
+        val button = findViewById<Button>(R.id.verifyEmployeeButton)
+        button.isEnabled = false
+        button.text = "Verifying…"
+        lifecycleScope.launch {
+            runCatching { withContext(Dispatchers.IO) { verifyEmployeeWithCrm(selected, password) } }
+                .onSuccess { verified ->
+                    settings.activeEmployee = verified.name
+                    settings.activeEmployeeId = verified.id
+                    settings.activeEmployeeEmail = verified.email
+                    pendingEmployee = null
+                    passwordField.setText("")
+                    findViewById<AutoCompleteTextView>(R.id.employeeName).setText(verified.name, false)
+                    if (settings.shiftActive) ActiveUserNotification.show(this@MainActivity)
+                    status.text = "Verified employee: ${verified.name}"
+                }
+                .onFailure {
+                    passwordField.setText("")
+                    status.text = "Verification failed. Check the CRM / Workforce password."
+                }
+            button.isEnabled = true
+            button.text = "Verify & use employee"
+            refreshUi()
+        }
+    }
+
+    private fun clearEmployee() {
+        settings.activeEmployee = ""
+        settings.activeEmployeeId = ""
+        settings.activeEmployeeEmail = ""
+        pendingEmployee = null
+        findViewById<AutoCompleteTextView>(R.id.employeeName).setText("", false)
+        findViewById<EditText>(R.id.employeePassword).setText("")
+        if (settings.shiftActive) ActiveUserNotification.show(this)
+        refreshUi()
+    }
+
+    private fun verifyEmployeeWithCrm(selected: EmployeeOption, password: String): EmployeeOption {
+        require(settings.apiBaseUrl.isNotBlank() && settings.apiKey.isNotBlank()) { "Enter CRM URL and API key" }
+        val connection = (URL("${settings.apiBaseUrl}/api/mobile/employees/verify").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = 20_000
+            readTimeout = 25_000
+            setRequestProperty("Authorization", "Bearer ${settings.apiKey}")
+            setRequestProperty("Content-Type", "application/json")
+        }
+        connection.outputStream.use { output ->
+            output.write(JSONObject().put("employeeId", selected.id).put("password", password).toString().toByteArray())
+        }
+        if (connection.responseCode !in 200..299) throw IllegalStateException("Invalid credentials")
+        val employee = JSONObject(connection.inputStream.bufferedReader().readText()).getJSONObject("employee")
+        return EmployeeOption(
+            employee.getString("id"),
+            employee.getString("name"),
+            employee.getString("email"),
+            employee.optString("department", "unassigned")
+        )
     }
 
     private fun fetchEmployees(): List<EmployeeOption> {

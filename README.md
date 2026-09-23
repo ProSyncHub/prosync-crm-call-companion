@@ -8,6 +8,8 @@ This build captures normal Android SIM calls on company phones, attributes each 
 - `CAPTURE OFF`: the companion does not observe/save call history, scan recordings, or upload data.
 - Turning capture off does not control the manufacturer's native Phone recorder. If that Phone app is independently configured to record every call, Android may still create its own file; ProSync will not read or upload it while OFF.
 - Calls made without internet remain queued with their original timestamps and sync automatically when connectivity returns.
+- Capture ON/OFF does not depend on employee selection. If no employee is verified, calls are retained and synced as `UNASSIGNED`.
+- Selecting an employee requires that employee's CRM / Workforce password. The password is sent only for server verification and is never stored on the phone.
 
 It is not a CRM dialer. Employees keep using the normal phone app.
 
@@ -53,7 +55,7 @@ Use one Samsung Galaxy A55 first.
 2. Grant Call Log + Phone State permissions.
 3. Enter CRM URL and mobile API key.
 4. Sync employees from CRM.
-5. Select employee.
+5. Select an employee and verify their CRM / Workforce password, or choose Unassigned.
 6. Set device label, e.g. `Samsung A55 - Test`.
 7. Tap **TURN CAPTURE ON**.
 8. Make 5 outgoing calls.
