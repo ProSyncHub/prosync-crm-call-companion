@@ -47,6 +47,8 @@ The app posts to:
 
 Use the CRM `MOBILE_SYNC_API_KEY` as the app API key.
 
+The internal APK receives `MOBILE_SYNC_API_KEY` and `CRM_BASE_URL` as Gradle build environment variables. They are compiled into the APK so staff are never prompted for connection setup. The values are not committed to Git, but an embedded key can be extracted from an APK; distribute builds only to approved company phones.
+
 ## First physical test
 
 Use one Samsung Galaxy A55 first.

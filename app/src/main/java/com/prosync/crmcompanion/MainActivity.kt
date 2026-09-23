@@ -41,6 +41,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         settings = SettingsStore(this)
+        settings.apiBaseUrl = BuildConfig.CRM_BASE_URL
+        settings.apiKey = BuildConfig.MOBILE_SYNC_API_KEY
 
         findViewById<Button>(R.id.syncEmployeesButton).setOnClickListener { syncEmployees() }
         findViewById<AutoCompleteTextView>(R.id.employeeName).setOnItemClickListener { parent, _, position, _ ->
@@ -75,10 +77,10 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString().trim()
-            val apiKey = findViewById<EditText>(R.id.apiKey).text.toString().trim()
+            val apiBaseUrl = BuildConfig.CRM_BASE_URL.trim()
+            val apiKey = BuildConfig.MOBILE_SYNC_API_KEY.trim()
             if (apiBaseUrl.isBlank() || apiKey.isBlank()) {
-                findViewById<EditText>(R.id.apiBaseUrl).error = "CRM URL and mobile API key are required"
+                findViewById<TextView>(R.id.connectionStatus).text = "This APK was built without the CRM mobile key."
                 return@setOnClickListener
             }
             val deviceLabel = findViewById<EditText>(R.id.deviceLabel).text.toString().trim()
@@ -103,8 +105,6 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.syncButton).setOnClickListener {
             if (!settings.shiftActive) return@setOnClickListener
-            settings.apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString()
-            settings.apiKey = findViewById<EditText>(R.id.apiKey).text.toString()
             SyncScheduler.enqueueRecordingAndSync(this, 0)
             window.decorView.postDelayed({ refreshUi() }, 1800)
         }
@@ -126,8 +126,11 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<AutoCompleteTextView>(R.id.employeeName).setText(settings.activeEmployee, false)
         findViewById<EditText>(R.id.deviceLabel).setText(settings.deviceLabel)
-        findViewById<EditText>(R.id.apiBaseUrl).setText(settings.apiBaseUrl)
-        findViewById<EditText>(R.id.apiKey).setText(settings.apiKey)
+        findViewById<TextView>(R.id.connectionStatus).text = if (BuildConfig.MOBILE_SYNC_API_KEY.isBlank()) {
+            "CRM connection is missing from this APK build."
+        } else {
+            "CRM connection built in ✓  ${BuildConfig.CRM_BASE_URL}"
+        }
 
         val callLogOk = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
         val phoneStateOk = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
@@ -183,8 +186,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun syncEmployees() {
-        settings.apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString()
-        settings.apiKey = findViewById<EditText>(R.id.apiKey).text.toString()
         val button = findViewById<Button>(R.id.syncEmployeesButton)
         button.isEnabled = false; button.text = "Syncing employees…"
         lifecycleScope.launch {
@@ -202,8 +203,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun verifyEmployee() {
-        settings.apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrl).text.toString()
-        settings.apiKey = findViewById<EditText>(R.id.apiKey).text.toString()
         val selected = pendingEmployee ?: employees.firstOrNull {
             it.name.equals(findViewById<AutoCompleteTextView>(R.id.employeeName).text.toString(), true)
         }

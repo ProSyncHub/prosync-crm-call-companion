@@ -130,6 +130,11 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
     }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markSynced(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("sync_status", "SYNCED"); putNull("sync_error") }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markAnalysisComplete(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("analysis_status", "COMPLETE") }, "call_log_id = ?", arrayOf(callLogId.toString()))
+    fun markAnalysisPending(callLogId: Long, error: String) = writableDatabase.update("calls", ContentValues().apply {
+        put("sync_status", "SYNCED")
+        put("analysis_status", "PENDING")
+        put("sync_error", "CRM synced · transcript/AI pending: ${error.take(400)}")
+    }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markSyncFailed(callLogId: Long, error: String) = writableDatabase.update("calls", ContentValues().apply { put("sync_status", "FAILED"); put("sync_error", error.take(500)) }, "call_log_id = ?", arrayOf(callLogId.toString()))
 
     private fun Cursor.toRecord(): CallRecord = CallRecord(

@@ -37,7 +37,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                             }
                             .onFailure {
                                 retryNeeded = true
-                                db.markSyncFailed(call.callLogId, it.message ?: "Transcription and AI analysis failed")
+                                db.markAnalysisPending(call.callLogId, it.message ?: "Transcription and AI analysis failed")
                             }
                     } else {
                         retryNeeded = true
@@ -77,7 +77,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("recording_status", call.recordingStatus.lowercase())
                 put("recording_file_name", call.recordingName ?: "")
                 put("recording_match_confidence", if (call.recordingUri == null) "none" else "high")
-                put("app_version", "0.5.0-employee-verification")
+                put("app_version", "0.5.1-auto-sync")
             }
             text("payload", payload.toString())
             call.recordingUri?.let { uriValue ->
