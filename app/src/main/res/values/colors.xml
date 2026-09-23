@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#F4F7FB</color>
+    <color name="panel">#FFFFFF</color>
+    <color name="panel_border">#DDE5F0</color>
+    <color name="ink">#0F172A</color>
+    <color name="muted_ink">#64748B</color>
+    <color name="capture_on">#059669</color>
+    <color name="capture_off">#DC2626</color>
+    <color name="capture_on_surface">#D1FAE5</color>
+    <color name="capture_off_surface">#FEE2E2</color>
+</resources>

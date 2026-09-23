@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/app_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="ProSync" android:textColor="@color/ink" android:textSize="30sp" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginBottom="18dp" android:text="CRM Call Companion"
+            android:textColor="@color/muted_ink" android:textSize="16sp" />
+
+        <TextView android:id="@+id/captureStatus" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:background="@drawable/rounded_panel"
+            android:gravity="center" android:padding="22dp" android:text="CAPTURE OFF"
+            android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+        <Button android:id="@+id/captureToggleButton" android:layout_width="match_parent"
+            android:layout_height="56dp" android:layout_marginTop="12dp"
+            android:text="TURN CAPTURE ON" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:gravity="center"
+            android:text="When OFF, this app does not capture call history, scan recordings, or upload anything."
+            android:textColor="@color/muted_ink" android:textSize="12sp" />
+
+        <TextView style="@style/SectionTitle" android:text="1 · Connection" />
+        <LinearLayout style="@style/Panel" android:orientation="vertical">
+            <EditText android:id="@+id/apiBaseUrl" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:hint="CRM URL" android:inputType="textUri" />
+            <EditText android:id="@+id/apiKey" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:hint="Mobile sync API key" android:inputType="textPassword" />
+            <EditText android:id="@+id/deviceLabel" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:hint="Device label, e.g. Samsung A55 · Support 1" android:inputType="text" />
+            <TextView android:id="@+id/deviceInfo" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:textColor="@color/muted_ink" android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView style="@style/SectionTitle" android:text="2 · Employee" />
+        <LinearLayout style="@style/Panel" android:orientation="vertical">
+            <AutoCompleteTextView android:id="@+id/employeeName" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:completionThreshold="1"
+                android:hint="Search and select CRM employee" android:inputType="textPersonName" />
+            <Button android:id="@+id/syncEmployeesButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Load employees from CRM" />
+        </LinearLayout>
+
+        <TextView style="@style/SectionTitle" android:text="3 · Phone setup" />
+        <LinearLayout style="@style/Panel" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Enable automatic call recording in the phone's native Phone app. ProSync securely matches and uploads those files after each call."
+                android:textColor="@color/ink" android:textSize="13sp" />
+            <Button android:id="@+id/permissionsButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Grant required permissions" />
+            <TextView android:id="@+id/permissionStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:textColor="@color/muted_ink" android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView style="@style/SectionTitle" android:text="Sync &amp; diagnostics" />
+        <LinearLayout style="@style/Panel" android:orientation="vertical">
+            <Button android:id="@+id/syncButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Sync now" />
+            <Button android:id="@+id/recoveryScanButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Recover missed calls" />
+            <Button android:id="@+id/refreshButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Refresh activity" />
+            <TextView android:id="@+id/callCount" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                android:textColor="@color/ink" android:textStyle="bold" />
+            <TextView android:id="@+id/localCalls" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:text="No calls captured yet." android:textColor="@color/muted_ink" android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:gravity="center"
+            android:text="Calls are queued safely offline and keep their original date and time."
+            android:textColor="@color/muted_ink" android:textSize="11sp" />
+    </LinearLayout>
+</ScrollView>
