@@ -6,6 +6,10 @@ import java.util.UUID
 class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences("prosync_settings", Context.MODE_PRIVATE)
 
+    var onboardingComplete: Boolean
+        get() = prefs.getBoolean("onboarding_complete", false)
+        set(value) = prefs.edit().putBoolean("onboarding_complete", value).apply()
+
     var activeEmployee: String
         get() = prefs.getString("active_employee", "") ?: ""
         set(value) = prefs.edit().putString("active_employee", value.trim()).apply()

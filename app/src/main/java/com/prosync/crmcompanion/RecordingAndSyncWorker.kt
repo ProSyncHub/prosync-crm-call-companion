@@ -33,6 +33,10 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                       response.unmatchedCallId.isNotBlank() -> {
                         db.markUnmatchedSynced(call.callLogId)
                       }
+                      response.recordingWarning.isNotBlank() -> {
+                        retryNeeded = true
+                        db.markRecordingUploadPending(call.callLogId, response.recordingWarning)
+                      }
                       call.recordingUri != null && response.callLogId.isNotBlank() -> {
                         runCatching { analyze(response.callLogId, settings) }
                             .onSuccess {
@@ -62,7 +66,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
         if (retryNeeded) Result.retry() else Result.success()
     }
 
-    data class UploadResponse(val callLogId: String, val unmatchedCallId: String)
+    data class UploadResponse(val callLogId: String, val unmatchedCallId: String, val recordingWarning: String)
 
     private fun upload(call: CallRecord, settings: SettingsStore): UploadResponse {
         val boundary = "ProSync-${System.currentTimeMillis()}"
@@ -87,7 +91,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("recording_status", call.recordingStatus.lowercase())
                 put("recording_file_name", call.recordingName ?: "")
                 put("recording_match_confidence", if (call.recordingUri == null) "none" else "high")
-                put("app_version", "0.5.4-auto-phone-scan")
+                put("app_version", BuildConfig.VERSION_NAME)
             }
             text("payload", payload.toString())
             call.recordingUri?.let { uriValue ->
@@ -105,7 +109,8 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
         val json = JSONObject(body)
         return UploadResponse(
             callLogId = json.optString("callLogId", ""),
-            unmatchedCallId = json.optString("unmatchedCallId", "")
+            unmatchedCallId = json.optString("unmatchedCallId", ""),
+            recordingWarning = json.optString("recordingWarning", "")
         )
     }
 

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/app_background" android:fitsSystemWindows="true"
+    android:orientation="vertical" android:padding="24dp">
+    <ImageView android:layout_width="64dp" android:layout_height="64dp" android:src="@drawable/ic_prosync_logo" android:contentDescription="ProSync" />
+    <TextView android:id="@+id/setupProgress" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:textColor="@color/brand_orange" android:textStyle="bold" />
+    <ViewFlipper android:id="@+id/onboardingPages" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Set up call capture" android:textColor="@color/ink" android:textSize="30sp" android:textStyle="bold" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="ProSync securely maps native phone calls and recordings to CRM, then queues transcription and AI analysis." android:textColor="@color/muted_ink" android:textSize="16sp" />
+            <Button android:id="@+id/welcomeContinue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:text="Start setup" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Allow phone activity" android:textColor="@color/ink" android:textSize="27sp" android:textStyle="bold" />
+            <TextView android:id="@+id/phonePermissionStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Required to detect when a normal SIM call finishes and read its accurate date, direction and duration." android:textColor="@color/muted_ink" />
+            <Button android:id="@+id/phonePermissionButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="Allow phone access" />
+            <Button android:id="@+id/phoneContinue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Continue" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Find call recordings" android:textColor="@color/ink" android:textSize="27sp" android:textStyle="bold" />
+            <TextView android:id="@+id/scanStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Allow audio access, then ProSync will scan your phone automatically." android:textColor="@color/muted_ink" />
+            <Button android:id="@+id/scanPermissionButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="Allow audio &amp; scan phone" />
+            <Button android:id="@+id/scanContinue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Continue" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Keep capture reliable" android:textColor="@color/ink" android:textSize="27sp" android:textStyle="bold" />
+            <TextView android:id="@+id/notificationStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/muted_ink" />
+            <Button android:id="@+id/notificationPermissionButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="Allow notifications" />
+            <Button android:id="@+id/notificationContinue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Continue" />
+        </LinearLayout>
+        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="28dp" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sign in as the employee" android:textColor="@color/ink" android:textSize="27sp" android:textStyle="bold" />
+                <TextView android:id="@+id/loginStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Load the CRM team and select yourself." android:textColor="@color/muted_ink" />
+                <Button android:id="@+id/reloadEmployeesButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="Load CRM employees" />
+                <AutoCompleteTextView android:id="@+id/onboardingEmployee" android:layout_width="match_parent" android:layout_height="56dp" android:hint="Select employee" android:inputType="none" />
+                <EditText android:id="@+id/onboardingPassword" android:layout_width="match_parent" android:layout_height="56dp" android:hint="CRM / Workforce password" android:inputType="textPassword" />
+                <Button android:id="@+id/verifyOnboardingEmployee" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Verify employee" />
+                <Button android:id="@+id/finishOnboardingButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Finish setup" />
+            </LinearLayout>
+        </ScrollView>
+    </ViewFlipper>
+</LinearLayout>

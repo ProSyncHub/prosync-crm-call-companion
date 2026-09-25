@@ -2,6 +2,8 @@ package com.prosync.crmcompanion
 
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.LinearLayout
@@ -15,19 +17,26 @@ import java.util.Locale
 
 class CallHistoryActivity : AppCompatActivity() {
     private val dateFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+    private val handler = Handler(Looper.getMainLooper())
+    private val refreshLoop = object : Runnable {
+        override fun run() { renderCalls(); handler.postDelayed(this, 2_000) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyProSyncSystemBars()
         setContentView(R.layout.activity_call_history)
         findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
-        findViewById<Button>(R.id.historyRefreshButton).setOnClickListener { renderCalls() }
         renderCalls()
     }
 
     override fun onResume() {
         super.onResume()
-        renderCalls()
+        handler.removeCallbacks(refreshLoop)
+        handler.post(refreshLoop)
     }
+
+    override fun onPause() { handler.removeCallbacks(refreshLoop); super.onPause() }
 
     private fun renderCalls() {
         val calls = CallDb(this).latest(250)

@@ -31,6 +31,8 @@
         <activity
             android:name=".CallHistoryActivity"
             android:exported="false" />
+        <activity android:name=".OnboardingActivity" android:exported="false" />
+        <activity android:name=".SettingsActivity" android:exported="false" />
 
         <receiver
             android:name=".PhoneStateReceiver"

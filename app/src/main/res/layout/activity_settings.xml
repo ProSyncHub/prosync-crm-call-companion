@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/app_background" android:fitsSystemWindows="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Settings" android:textColor="@color/ink" android:textSize="28sp" android:textStyle="bold" />
+            <Button android:id="@+id/settingsBackButton" android:layout_width="wrap_content" android:layout_height="48dp" android:text="Done" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="EMPLOYEE" android:textColor="@color/brand_orange" android:textStyle="bold" />
+        <TextView android:id="@+id/settingsEmployee" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
+        <Button android:id="@+id/changeEmployeeButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Change employee / rerun setup" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="CRM CONNECTION" android:textColor="@color/brand_orange" android:textStyle="bold" />
+        <TextView android:id="@+id/settingsConnection" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
+        <Button android:id="@+id/testCrmButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Test CRM connection" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="DEVICE NAME" android:textColor="@color/brand_orange" android:textStyle="bold" />
+        <EditText android:id="@+id/settingsDeviceLabel" android:layout_width="match_parent" android:layout_height="56dp" android:hint="e.g. Abdul's Samsung" />
+        <Button android:id="@+id/saveDeviceButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save device name" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="PERMISSIONS &amp; RECORDINGS" android:textColor="@color/brand_orange" android:textStyle="bold" />
+        <TextView android:id="@+id/settingsPermissions" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
+        <TextView android:id="@+id/settingsScan" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
+        <Button android:id="@+id/rescanButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Scan phone again" />
+        <TextView android:id="@+id/settingsFolder" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:textColor="@color/muted_ink" />
+        <Button android:id="@+id/chooseFolderButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Choose hidden recording folder" />
+        <TextView android:id="@+id/settingsVersion" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:gravity="center" android:textColor="@color/muted_ink" />
+    </LinearLayout>
+</ScrollView>

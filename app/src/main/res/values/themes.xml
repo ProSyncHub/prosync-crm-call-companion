@@ -4,6 +4,9 @@
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:colorAccent">@color/capture_on</item>
         <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <style name="SectionTitle">

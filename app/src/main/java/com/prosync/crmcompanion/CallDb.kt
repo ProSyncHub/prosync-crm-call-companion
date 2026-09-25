@@ -96,6 +96,13 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         }
     }
 
+    fun pendingCount(): Int {
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM calls WHERE sync_status != ? OR recording_status = ? OR analysis_status NOT IN (?, ?)",
+            arrayOf("SYNCED", "PENDING", "COMPLETE", "UNMATCHED")
+        ).use { c -> return if (c.moveToFirst()) c.getInt(0) else 0 }
+    }
+
     fun latest(limit: Int = 30): List<CallRecord> {
         val rows = mutableListOf<CallRecord>()
         readableDatabase.query(
@@ -138,6 +145,12 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         put("sync_status", "SYNCED")
         put("analysis_status", "PENDING")
         put("sync_error", "CRM synced · transcript/AI pending: ${error.take(400)}")
+    }, "call_log_id = ?", arrayOf(callLogId.toString()))
+    fun markRecordingUploadPending(callLogId: Long, error: String) = writableDatabase.update("calls", ContentValues().apply {
+        put("sync_status", "SYNCED")
+        put("recording_status", "FOUND")
+        put("analysis_status", "PENDING")
+        put("sync_error", "Call details saved in CRM · recording upload pending: ${error.take(350)}")
     }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markSyncFailed(callLogId: Long, error: String) = writableDatabase.update("calls", ContentValues().apply { put("sync_status", "FAILED"); put("sync_error", error.take(500)) }, "call_log_id = ?", arrayOf(callLogId.toString()))
 

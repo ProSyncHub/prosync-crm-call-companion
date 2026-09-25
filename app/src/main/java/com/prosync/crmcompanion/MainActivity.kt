@@ -1,385 +1,92 @@
 package com.prosync.crmcompanion
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Bundle
 import android.content.res.ColorStateList
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Button
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import android.widget.EditText
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var settings: SettingsStore
-    private var employees: List<EmployeeOption> = emptyList()
-    private var pendingEmployee: EmployeeOption? = null
-
-    data class EmployeeOption(val id: String, val name: String, val email: String, val department: String) {
-        override fun toString() = "$name • $department"
-    }
-
-    private val permissionsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        refreshUi()
-        if (hasAudioPermission()) scanRecordingLocations()
-    }
-
-    private val recordingFolderLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            runCatching {
-                contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            }
-            settings.recordingFolderUri = uri.toString()
-            if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this, 0)
-            scanRecordingLocations()
-        }
+    private val handler = Handler(Looper.getMainLooper())
+    private val refreshLoop = object : Runnable {
+        override fun run() { render(); handler.postDelayed(this, 2_000) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyProSyncSystemBars()
+        settings = SettingsStore(this).also {
+            it.apiBaseUrl = BuildConfig.CRM_BASE_URL
+            it.apiKey = BuildConfig.MOBILE_SYNC_API_KEY
+        }
+        if (!settings.onboardingComplete) {
+            startActivity(Intent(this, OnboardingActivity::class.java)); finish(); return
+        }
         setContentView(R.layout.activity_main)
-        settings = SettingsStore(this)
-        settings.apiBaseUrl = BuildConfig.CRM_BASE_URL
-        settings.apiKey = BuildConfig.MOBILE_SYNC_API_KEY
+        findViewById<Button>(R.id.callsButton).setOnClickListener { startActivity(Intent(this, CallHistoryActivity::class.java)) }
+        findViewById<Button>(R.id.settingsButton).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        findViewById<Button>(R.id.captureToggleButton).setOnClickListener { toggleCapture() }
         if (settings.shiftActive) {
             SyncScheduler.scheduleRecovery(this)
             SyncScheduler.enqueueRecordingAndSync(this, 0)
-        }
-
-        findViewById<Button>(R.id.syncEmployeesButton).setOnClickListener { syncEmployees() }
-        findViewById<Button>(R.id.callsButton).setOnClickListener {
-            startActivity(Intent(this, CallHistoryActivity::class.java))
-        }
-        findViewById<Button>(R.id.recordingFolderButton).setOnClickListener {
-            recordingFolderLauncher.launch(null)
-        }
-        findViewById<Button>(R.id.scanRecordingsButton).setOnClickListener { scanRecordingLocations() }
-        findViewById<AutoCompleteTextView>(R.id.employeeName).setOnItemClickListener { parent, _, position, _ ->
-            val selected = parent.getItemAtPosition(position) as EmployeeOption
-            pendingEmployee = selected
-            findViewById<EditText>(R.id.employeePassword).setText("")
-            findViewById<TextView>(R.id.employeeVerificationStatus).text =
-                "Selected ${selected.name}. Enter the CRM / Workforce password to verify."
-        }
-        findViewById<Button>(R.id.verifyEmployeeButton).setOnClickListener { verifyEmployee() }
-        findViewById<Button>(R.id.clearEmployeeButton).setOnClickListener { clearEmployee() }
-
-        findViewById<Button>(R.id.permissionsButton).setOnClickListener {
-            val requested = mutableListOf(
-                    Manifest.permission.READ_CALL_LOG,
-                    Manifest.permission.READ_PHONE_STATE
-                )
-            if (Build.VERSION.SDK_INT >= 33) requested += Manifest.permission.READ_MEDIA_AUDIO
-            else requested += Manifest.permission.READ_EXTERNAL_STORAGE
-            if (Build.VERSION.SDK_INT >= 33) requested += Manifest.permission.POST_NOTIFICATIONS
-            permissionsLauncher.launch(requested.toTypedArray())
-        }
-
-        findViewById<Button>(R.id.captureToggleButton).setOnClickListener {
-            if (settings.shiftActive) {
-                settings.shiftActive = false
-                settings.trackingStartedAt = 0L
-                CallSessionStore(this).clear()
-                SyncScheduler.disableCapture(this)
-                ActiveUserNotification.cancel(this)
-                refreshUi()
-                return@setOnClickListener
-            }
-
-            if (settings.recordingScanCompletedAt == 0L) {
-                findViewById<TextView>(R.id.captureStatus).text =
-                    "COMPLETE STEP 1\nScan the phone for recording locations before turning capture on."
-                return@setOnClickListener
-            }
-
-            val apiBaseUrl = BuildConfig.CRM_BASE_URL.trim()
-            val apiKey = BuildConfig.MOBILE_SYNC_API_KEY.trim()
-            if (apiBaseUrl.isBlank() || apiKey.isBlank()) {
-                findViewById<TextView>(R.id.connectionStatus).text = "This APK was built without the CRM mobile key."
-                return@setOnClickListener
-            }
-            val deviceLabel = findViewById<EditText>(R.id.deviceLabel).text.toString().trim()
-
-            settings.deviceLabel = deviceLabel
-            settings.apiBaseUrl = apiBaseUrl
-            settings.apiKey = apiKey
-            settings.shiftActive = true
-            settings.shiftStartedAt = System.currentTimeMillis()
-            settings.trackingStartedAt = settings.shiftStartedAt
-            SyncScheduler.scheduleRecovery(this)
             ActiveUserNotification.show(this)
-            refreshUi()
         }
-
-        findViewById<Button>(R.id.refreshButton).setOnClickListener { refreshUi() }
-        findViewById<Button>(R.id.recoveryScanButton).setOnClickListener {
-            if (!settings.shiftActive) return@setOnClickListener
-            if (settings.trackingStartedAt == 0L) settings.trackingStartedAt = System.currentTimeMillis()
-            SyncScheduler.enqueueRecoveryNow(this)
-            window.decorView.postDelayed({ refreshUi() }, 1500)
-        }
-        findViewById<Button>(R.id.syncButton).setOnClickListener {
-            if (!settings.shiftActive) return@setOnClickListener
-            SyncScheduler.enqueueRecordingAndSync(this, 0)
-            window.decorView.postDelayed({ refreshUi() }, 1800)
-        }
-
-        refreshUi()
-        if (hasAudioPermission() && settings.recordingScanCompletedAt == 0L) {
-            window.decorView.post { scanRecordingLocations() }
-        }
+        render()
     }
 
     override fun onResume() {
         super.onResume()
-        refreshUi()
+        if (::settings.isInitialized && settings.onboardingComplete) {
+            handler.removeCallbacks(refreshLoop); handler.post(refreshLoop)
+            if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this, 0)
+        }
     }
 
-    private fun refreshUi() {
-        findViewById<TextView>(R.id.deviceInfo).text = buildString {
-            append("Device: ${Build.MANUFACTURER} ${Build.MODEL}\n")
-            append("Android API: ${Build.VERSION.SDK_INT}\n")
-            append("Device ID: ${settings.deviceId.take(8)}…")
-        }
+    override fun onPause() { handler.removeCallbacks(refreshLoop); super.onPause() }
 
-        findViewById<AutoCompleteTextView>(R.id.employeeName).setText(settings.activeEmployee, false)
-        findViewById<EditText>(R.id.deviceLabel).setText(settings.deviceLabel)
-        findViewById<TextView>(R.id.connectionStatus).text = if (BuildConfig.MOBILE_SYNC_API_KEY.isBlank()) {
-            "CRM connection is missing from this APK build."
+    private fun toggleCapture() {
+        if (settings.shiftActive) {
+            settings.shiftActive = false; settings.trackingStartedAt = 0L
+            CallSessionStore(this).clear(); SyncScheduler.disableCapture(this); ActiveUserNotification.cancel(this)
         } else {
-            "CRM connection built in ✓  ${BuildConfig.CRM_BASE_URL}"
+            settings.shiftActive = true; settings.shiftStartedAt = System.currentTimeMillis(); settings.trackingStartedAt = settings.shiftStartedAt
+            SyncScheduler.scheduleRecovery(this); SyncScheduler.enqueueRecoveryNow(this); ActiveUserNotification.show(this)
         }
+        render()
+    }
 
-        val callLogOk = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
-        val phoneStateOk = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
-        val audioPermission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-        val audioOk = ContextCompat.checkSelfPermission(this, audioPermission) == PackageManager.PERMISSION_GRANTED
-        val notificationsOk = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        findViewById<TextView>(R.id.permissionStatus).text =
-            "Call log: ${if (callLogOk) "✓" else "✗"}    Phone state: ${if (phoneStateOk) "✓" else "✗"}    Audio: ${if (audioOk) "✓" else "✗"}    Notification: ${if (notificationsOk) "✓" else "✗"}"
-        findViewById<TextView>(R.id.recordingFolderStatus).text = if (settings.recordingFolderUri.isBlank()) {
-            "Direct folder access: not needed unless Android hides the folder from automatic scanning."
-        } else {
-            "Call-recordings folder connected ✓"
+    private fun render() {
+        val db = CallDb(this); val latest = db.latest(3)
+        findViewById<TextView>(R.id.employeeHeader).text = settings.activeEmployee.ifBlank { "Unassigned employee" }
+        findViewById<TextView>(R.id.captureStatus).apply {
+            text = if (settings.shiftActive) "CAPTURE ON\nCalls sync automatically after they end." else "CAPTURE OFF\nNo calls will be captured or uploaded."
+            backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, if (settings.shiftActive) R.color.capture_on_surface else R.color.capture_off_surface))
         }
-        findViewById<TextView>(R.id.recordingScanStatus).text = when {
-            !audioOk -> "Grant the Audio permission to run the automatic phone scan."
-            settings.recordingScanSummary.isNotBlank() -> settings.recordingScanSummary
-            else -> "Ready to scan the phone automatically for call recordings."
+        findViewById<Button>(R.id.captureToggleButton).apply {
+            text = if (settings.shiftActive) "Turn capture off" else "Turn capture on"
+            backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, if (settings.shiftActive) R.color.capture_off else R.color.capture_on))
         }
-
-        val df = SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault())
-        val captureStatus = findViewById<TextView>(R.id.captureStatus)
-        val captureButton = findViewById<Button>(R.id.captureToggleButton)
-        captureStatus.text = if (settings.shiftActive) {
-            ActiveUserNotification.show(this)
-            "CAPTURE ON\n${settings.activeEmployee.ifBlank { "UNASSIGNED — select and verify an employee" }}\nSince ${df.format(Date(settings.shiftStartedAt))}"
-        } else {
-            "CAPTURE OFF\nNo call history, recording, or upload will be created."
-        }
-        captureStatus.backgroundTintList = ColorStateList.valueOf(
-            ContextCompat.getColor(this, if (settings.shiftActive) R.color.capture_on_surface else R.color.capture_off_surface)
-        )
-        captureButton.text = if (settings.shiftActive) "TURN CAPTURE OFF" else "TURN CAPTURE ON"
-        captureButton.backgroundTintList = ColorStateList.valueOf(
-            ContextCompat.getColor(this, if (settings.shiftActive) R.color.capture_off else R.color.capture_on)
-        )
-        findViewById<Button>(R.id.syncButton).isEnabled = settings.shiftActive
-        findViewById<Button>(R.id.recoveryScanButton).isEnabled = settings.shiftActive
-        findViewById<TextView>(R.id.employeeVerificationStatus).text = if (settings.activeEmployee.isBlank()) {
-            "No verified employee. Calls captured while ON will be saved as UNASSIGNED."
-        } else {
-            "Signed in for call attribution: ${settings.activeEmployee}"
-        }
-
-        val db = CallDb(this)
-        val latest = db.latest(30)
-        findViewById<TextView>(R.id.callCount).text = "Captured calls: ${db.count()}"
-        findViewById<TextView>(R.id.localCalls).text = if (latest.isEmpty()) {
-            "No calls captured yet. Finish setup, turn capture ON, and make one normal SIM call."
-        } else {
-            buildString {
-                latest.forEach { call ->
-                    append("${call.direction}  ${call.rawNumber.ifBlank { "PRIVATE/UNKNOWN" }}\n")
-                    append("${df.format(Date(call.startedAt))}  •  ${call.durationSeconds}s\n")
-                    append("User: ${call.employeeName}  •  ${call.captureMode}")
-                    call.captureScore?.let { append("  •  score $it") }
-                    append("\nSIM account: ${call.phoneAccountId ?: "unknown"}")
-                    append("\nRecording: ${call.recordingStatus}  •  CRM: ${call.syncStatus}")
-                    call.syncError?.let { append("\nSync error: $it") }
-                    append("\n\n")
-                }
+        findViewById<TextView>(R.id.totalCalls).text = db.count().toString()
+        findViewById<TextView>(R.id.pendingCalls).text = db.pendingCount().toString()
+        val df = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
+        findViewById<TextView>(R.id.recentCalls).text = if (latest.isEmpty()) {
+            "No calls captured yet. Turn capture on and make a normal SIM call."
+        } else latest.joinToString("\n\n") { call ->
+            val sync = when {
+                call.syncStatus == "SYNCED" && call.analysisStatus == "COMPLETE" -> "CRM + analysis ready"
+                call.syncStatus == "SYNCED" -> "In CRM · processing"
+                call.syncStatus == "FAILED" -> "Will retry automatically"
+                else -> "Queued automatically"
             }
-        }
-    }
-
-    private fun syncEmployees() {
-        if (settings.recordingScanCompletedAt == 0L) {
-            findViewById<TextView>(R.id.employeeVerificationStatus).text =
-                "Complete Step 1 phone scan before employee login."
-            return
-        }
-        val button = findViewById<Button>(R.id.syncEmployeesButton)
-        button.isEnabled = false; button.text = "Syncing employees…"
-        lifecycleScope.launch {
-            runCatching { withContext(Dispatchers.IO) { fetchEmployees() } }
-                .onSuccess { options ->
-                    employees = options
-                    val field = findViewById<AutoCompleteTextView>(R.id.employeeName)
-                    field.setAdapter(ArrayAdapter(this@MainActivity, android.R.layout.simple_dropdown_item_1line, options))
-                    field.requestFocus(); field.showDropDown()
-                    button.text = "${options.size} Employees Synced"
-                }
-                .onFailure { button.text = "Sync Failed: ${it.message}" }
-            button.isEnabled = true
-        }
-    }
-
-    private fun verifyEmployee() {
-        if (settings.recordingScanCompletedAt == 0L) {
-            findViewById<TextView>(R.id.employeeVerificationStatus).text =
-                "Complete Step 1 phone scan before employee login."
-            return
-        }
-        val selected = pendingEmployee ?: employees.firstOrNull {
-            it.name.equals(findViewById<AutoCompleteTextView>(R.id.employeeName).text.toString(), true)
-        }
-        val passwordField = findViewById<EditText>(R.id.employeePassword)
-        val password = passwordField.text.toString()
-        val status = findViewById<TextView>(R.id.employeeVerificationStatus)
-        if (selected == null) {
-            status.text = "Load and select an employee first."
-            return
-        }
-        if (password.isBlank()) {
-            passwordField.error = "Enter the employee's CRM / Workforce password"
-            return
-        }
-        val button = findViewById<Button>(R.id.verifyEmployeeButton)
-        button.isEnabled = false
-        button.text = "Verifying…"
-        lifecycleScope.launch {
-            runCatching { withContext(Dispatchers.IO) { verifyEmployeeWithCrm(selected, password) } }
-                .onSuccess { verified ->
-                    settings.activeEmployee = verified.name
-                    settings.activeEmployeeId = verified.id
-                    settings.activeEmployeeEmail = verified.email
-                    pendingEmployee = null
-                    passwordField.setText("")
-                    findViewById<AutoCompleteTextView>(R.id.employeeName).setText(verified.name, false)
-                    if (settings.shiftActive) ActiveUserNotification.show(this@MainActivity)
-                    status.text = "Signed in for call attribution: ${verified.name}"
-                }
-                .onFailure {
-                    passwordField.setText("")
-                    status.text = "Verification failed. Check the CRM / Workforce password."
-                }
-            button.isEnabled = true
-            button.text = "Verify & use employee"
-            refreshUi()
-        }
-    }
-
-    private fun clearEmployee() {
-        settings.activeEmployee = ""
-        settings.activeEmployeeId = ""
-        settings.activeEmployeeEmail = ""
-        pendingEmployee = null
-        findViewById<AutoCompleteTextView>(R.id.employeeName).setText("", false)
-        findViewById<EditText>(R.id.employeePassword).setText("")
-        if (settings.shiftActive) ActiveUserNotification.show(this)
-        refreshUi()
-    }
-
-    private fun verifyEmployeeWithCrm(selected: EmployeeOption, password: String): EmployeeOption {
-        require(settings.apiBaseUrl.isNotBlank() && settings.apiKey.isNotBlank()) { "Enter CRM URL and API key" }
-        val connection = (URL("${settings.apiBaseUrl}/api/mobile/employees/verify").openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = 20_000
-            readTimeout = 25_000
-            setRequestProperty("Authorization", "Bearer ${settings.apiKey}")
-            setRequestProperty("Content-Type", "application/json")
-        }
-        connection.outputStream.use { output ->
-            output.write(JSONObject().put("employeeId", selected.id).put("password", password).toString().toByteArray())
-        }
-        if (connection.responseCode !in 200..299) throw IllegalStateException("Invalid credentials")
-        val employee = JSONObject(connection.inputStream.bufferedReader().readText()).getJSONObject("employee")
-        return EmployeeOption(
-            employee.getString("id"),
-            employee.getString("name"),
-            employee.getString("email"),
-            employee.optString("department", "unassigned")
-        )
-    }
-
-    private fun fetchEmployees(): List<EmployeeOption> {
-        require(settings.apiBaseUrl.isNotBlank() && settings.apiKey.isNotBlank()) { "Enter CRM URL and API key" }
-        val connection = (URL("${settings.apiBaseUrl}/api/mobile/employees").openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"; connectTimeout = 20_000; readTimeout = 20_000
-            setRequestProperty("Authorization", "Bearer ${settings.apiKey}")
-        }
-        if (connection.responseCode !in 200..299) throw IllegalStateException("CRM returned HTTP ${connection.responseCode}")
-        val root = JSONObject(connection.inputStream.bufferedReader().readText())
-        val array = root.getJSONArray("employees")
-        return (0 until array.length()).map { index ->
-            val item = array.getJSONObject(index)
-            EmployeeOption(item.getString("id"), item.getString("name"), item.getString("email"), item.optString("department", "unassigned"))
-        }
-    }
-
-    private fun hasAudioPermission(): Boolean {
-        val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun scanRecordingLocations() {
-        val status = findViewById<TextView>(R.id.recordingScanStatus)
-        val button = findViewById<Button>(R.id.scanRecordingsButton)
-        if (!hasAudioPermission()) {
-            status.text = "Grant the Audio permission first so ProSync can scan the phone."
-            return
-        }
-        button.isEnabled = false
-        button.text = "Scanning phone…"
-        status.text = "Scanning the Android media catalog and detecting recording locations…"
-        lifecycleScope.launch {
-            runCatching { withContext(Dispatchers.IO) { RecordingLocationDiscovery.scan(this@MainActivity) } }
-                .onSuccess { result ->
-                    settings.recordingScanCompletedAt = System.currentTimeMillis()
-                    settings.recordingScanSummary = result.summary()
-                    status.text = settings.recordingScanSummary
-                    if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this@MainActivity, 0)
-                }
-                .onFailure {
-                    status.text = "Phone scan failed: ${it.message ?: "Android did not expose audio storage"}"
-                }
-            button.isEnabled = true
-            button.text = "Scan phone again"
-            refreshUi()
+            "${call.direction.lowercase().replaceFirstChar { it.uppercaseChar() }} · ${call.rawNumber.ifBlank { "Private number" }}\n${df.format(Date(call.startedAt))} · $sync"
         }
     }
 }
