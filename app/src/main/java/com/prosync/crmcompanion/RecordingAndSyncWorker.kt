@@ -29,7 +29,11 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
             }
             runCatching { upload(call, settings) }
                 .onSuccess { response ->
-                    if (call.recordingUri != null && response.callLogId.isNotBlank()) {
+                    when {
+                      response.unmatchedCallId.isNotBlank() -> {
+                        db.markUnmatchedSynced(call.callLogId)
+                      }
+                      call.recordingUri != null && response.callLogId.isNotBlank() -> {
                         runCatching { analyze(response.callLogId, settings) }
                             .onSuccess {
                                 db.markAnalysisComplete(call.callLogId)
@@ -39,9 +43,15 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                                 retryNeeded = true
                                 db.markAnalysisPending(call.callLogId, it.message ?: "Transcription and AI analysis failed")
                             }
-                    } else {
+                      }
+                      response.callLogId.isNotBlank() -> {
                         retryNeeded = true
                         db.markWaitingForRecording(call.callLogId)
+                      }
+                      else -> {
+                        retryNeeded = true
+                        db.markSyncFailed(call.callLogId, "CRM accepted the request without returning a call reference")
+                      }
                     }
                 }
                 .onFailure {
@@ -77,7 +87,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("recording_status", call.recordingStatus.lowercase())
                 put("recording_file_name", call.recordingName ?: "")
                 put("recording_match_confidence", if (call.recordingUri == null) "none" else "high")
-                put("app_version", "0.5.1-auto-sync")
+                put("app_version", "0.5.2-durable-auto-sync")
             }
             text("payload", payload.toString())
             call.recordingUri?.let { uriValue ->

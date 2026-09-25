@@ -32,6 +32,7 @@ object SyncScheduler {
             .putString(CallCaptureWorker.KEY_EMPLOYEE, snapshot.employeeName)
             .putString(CallCaptureWorker.KEY_EMPLOYEE_EMAIL, snapshot.employeeEmail)
             .putString(CallCaptureWorker.KEY_NUMBER_HINT, snapshot.numberHint)
+            .putString(CallCaptureWorker.KEY_EXPECTED_DIRECTION, snapshot.expectedDirection)
             .build()
 
         val request = OneTimeWorkRequestBuilder<CallCaptureWorker>()
@@ -71,7 +72,11 @@ object SyncScheduler {
             .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
             .addTag(CAPTURE_WORK_TAG)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork("prosync_recording_sync", ExistingWorkPolicy.REPLACE, request)
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "prosync_recording_sync",
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            request
+        )
     }
 
     fun disableCapture(context: Context) {

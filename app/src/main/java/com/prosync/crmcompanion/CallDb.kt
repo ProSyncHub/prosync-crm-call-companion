@@ -110,8 +110,8 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         val rows = mutableListOf<CallRecord>()
         readableDatabase.query(
             "calls", null,
-            "sync_status != ? OR (recording_uri IS NOT NULL AND analysis_status != ?)",
-            arrayOf("SYNCED", "COMPLETE"), null, null, "started_at ASC", limit.toString()
+            "sync_status != ? OR recording_status = ? OR (recording_uri IS NOT NULL AND analysis_status != ?)",
+            arrayOf("SYNCED", "PENDING", "COMPLETE"), null, null, "started_at ASC", limit.toString()
         ).use { c ->
             while (c.moveToNext()) rows += c.toRecord()
         }
@@ -126,7 +126,11 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
 
     fun markRecordingUnavailable(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("recording_status", "NOT_FOUND") }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markWaitingForRecording(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply {
-        put("recording_status", "PENDING"); put("sync_status", "WAITING_FOR_RECORDING"); putNull("sync_error")
+        put("recording_status", "PENDING"); put("sync_status", "SYNCED"); put("analysis_status", "PENDING")
+        put("sync_error", "CRM synced · waiting for the native phone recording")
+    }, "call_log_id = ?", arrayOf(callLogId.toString()))
+    fun markUnmatchedSynced(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply {
+        put("sync_status", "SYNCED"); put("analysis_status", "UNMATCHED"); putNull("sync_error")
     }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markSynced(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("sync_status", "SYNCED"); putNull("sync_error") }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markAnalysisComplete(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("analysis_status", "COMPLETE") }, "call_log_id = ?", arrayOf(callLogId.toString()))

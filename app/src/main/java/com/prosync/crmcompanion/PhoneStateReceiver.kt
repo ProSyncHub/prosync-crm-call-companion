@@ -23,12 +23,25 @@ class PhoneStateReceiver : BroadcastReceiver() {
         // Android can deliver this broadcast twice when both READ_PHONE_STATE and READ_CALL_LOG are granted.
         // beginIfNeeded() and finish() make the duplicate broadcasts harmless.
         when (state) {
-            TelephonyManager.EXTRA_STATE_RINGING,
-            TelephonyManager.EXTRA_STATE_OFFHOOK -> {
+            TelephonyManager.EXTRA_STATE_RINGING -> {
                 val numberHint = if (intent.hasExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)) {
                     intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
                 } else null
-                sessionStore.beginIfNeeded(employeeAtCallStart, settings.activeEmployeeEmail, numberHint)
+                sessionStore.beginIfNeeded(
+                    employeeAtCallStart,
+                    settings.activeEmployeeEmail,
+                    numberHint,
+                    "INCOMING"
+                )
+            }
+
+            TelephonyManager.EXTRA_STATE_OFFHOOK -> {
+                sessionStore.beginIfNeeded(
+                    employeeAtCallStart,
+                    settings.activeEmployeeEmail,
+                    null,
+                    "OUTGOING"
+                )
             }
 
             TelephonyManager.EXTRA_STATE_IDLE -> {

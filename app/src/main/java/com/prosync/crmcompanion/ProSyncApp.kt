@@ -7,6 +7,7 @@ class ProSyncApp : Application() {
         super.onCreate()
         if (SettingsStore(this).shiftActive) {
             SyncScheduler.scheduleRecovery(this)
+            SyncScheduler.enqueueRecordingAndSync(this, 0)
             ActiveUserNotification.show(this)
         }
     }

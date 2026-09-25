@@ -43,6 +43,10 @@ class MainActivity : AppCompatActivity() {
         settings = SettingsStore(this)
         settings.apiBaseUrl = BuildConfig.CRM_BASE_URL
         settings.apiKey = BuildConfig.MOBILE_SYNC_API_KEY
+        if (settings.shiftActive) {
+            SyncScheduler.scheduleRecovery(this)
+            SyncScheduler.enqueueRecordingAndSync(this, 0)
+        }
 
         findViewById<Button>(R.id.syncEmployeesButton).setOnClickListener { syncEmployees() }
         findViewById<AutoCompleteTextView>(R.id.employeeName).setOnItemClickListener { parent, _, position, _ ->
@@ -161,7 +165,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.employeeVerificationStatus).text = if (settings.activeEmployee.isBlank()) {
             "No verified employee. Calls captured while ON will be saved as UNASSIGNED."
         } else {
-            "Verified employee: ${settings.activeEmployee}"
+            "Signed in for call attribution: ${settings.activeEmployee}"
         }
 
         val db = CallDb(this)
@@ -230,7 +234,7 @@ class MainActivity : AppCompatActivity() {
                     passwordField.setText("")
                     findViewById<AutoCompleteTextView>(R.id.employeeName).setText(verified.name, false)
                     if (settings.shiftActive) ActiveUserNotification.show(this@MainActivity)
-                    status.text = "Verified employee: ${verified.name}"
+                    status.text = "Signed in for call attribution: ${verified.name}"
                 }
                 .onFailure {
                     passwordField.setText("")

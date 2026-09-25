@@ -55,7 +55,7 @@
             <Button android:id="@+id/verifyEmployeeButton" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="Verify &amp; use employee" />
             <Button android:id="@+id/clearEmployeeButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Use without employee (Unassigned)" />
+                android:layout_height="wrap_content" android:text="Sign out employee · continue unassigned" />
             <TextView android:id="@+id/employeeVerificationStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="8dp"
                 android:text="No verified employee. Calls will be unassigned."

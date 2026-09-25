@@ -22,6 +22,7 @@ class CallCaptureWorker(appContext: Context, params: WorkerParameters) : Corouti
         val employee = inputData.getString(KEY_EMPLOYEE).orEmpty().ifBlank { "UNASSIGNED" }
         val employeeEmail = inputData.getString(KEY_EMPLOYEE_EMAIL).orEmpty()
         val numberHint = inputData.getString(KEY_NUMBER_HINT)
+        val expectedDirection = inputData.getString(KEY_EXPECTED_DIRECTION).orEmpty()
 
         if (sessionStart <= 0L || sessionEnd <= 0L) return@withContext Result.failure()
 
@@ -32,7 +33,7 @@ class CallCaptureWorker(appContext: Context, params: WorkerParameters) : Corouti
             limit = 30
         )
 
-        val match = CallMatcher.bestMatch(candidates, sessionStart, sessionEnd, numberHint)
+        val match = CallMatcher.bestMatch(candidates, sessionStart, sessionEnd, numberHint, expectedDirection)
             ?: return@withContext Result.retry()
 
         // A deliberately forgiving threshold: we care more about never losing a call.
@@ -75,5 +76,6 @@ class CallCaptureWorker(appContext: Context, params: WorkerParameters) : Corouti
         const val KEY_EMPLOYEE = "employee"
         const val KEY_EMPLOYEE_EMAIL = "employee_email"
         const val KEY_NUMBER_HINT = "number_hint"
+        const val KEY_EXPECTED_DIRECTION = "expected_direction"
     }
 }

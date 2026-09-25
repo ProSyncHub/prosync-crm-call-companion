@@ -10,10 +10,17 @@ class CallSessionStore(context: Context) {
         val endedAt: Long,
         val employeeName: String,
         val employeeEmail: String,
-        val numberHint: String?
+        val numberHint: String?,
+        val expectedDirection: String
     )
 
-    fun beginIfNeeded(employeeName: String, employeeEmail: String, numberHint: String?, now: Long = System.currentTimeMillis()) {
+    fun beginIfNeeded(
+        employeeName: String,
+        employeeEmail: String,
+        numberHint: String?,
+        expectedDirection: String,
+        now: Long = System.currentTimeMillis()
+    ) {
         if (prefs.getBoolean("active", false)) {
             if (!numberHint.isNullOrBlank() && prefs.getString("number_hint", "").isNullOrBlank()) {
                 prefs.edit().putString("number_hint", numberHint).apply()
@@ -27,6 +34,7 @@ class CallSessionStore(context: Context) {
             .putString("employee", employeeName)
             .putString("employee_email", employeeEmail)
             .putString("number_hint", numberHint.orEmpty())
+            .putString("expected_direction", expectedDirection)
             .apply()
     }
 
@@ -38,7 +46,8 @@ class CallSessionStore(context: Context) {
             endedAt = now,
             employeeName = prefs.getString("employee", "UNASSIGNED") ?: "UNASSIGNED",
             employeeEmail = prefs.getString("employee_email", "") ?: "",
-            numberHint = prefs.getString("number_hint", "")?.takeIf { it.isNotBlank() }
+            numberHint = prefs.getString("number_hint", "")?.takeIf { it.isNotBlank() },
+            expectedDirection = prefs.getString("expected_direction", "UNKNOWN") ?: "UNKNOWN"
         )
 
         prefs.edit().clear().apply()

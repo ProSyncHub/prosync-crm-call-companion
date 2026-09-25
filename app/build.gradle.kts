@@ -23,8 +23,8 @@ android {
         applicationId = "com.prosync.crmcompanion"
         minSdk = 29
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.5.1-auto-sync"
+        versionCode = 7
+        versionName = "0.5.2-durable-auto-sync"
         buildConfigField("String", "MOBILE_SYNC_API_KEY", quotedBuildConfig(embeddedMobileSyncApiKey))
         buildConfigField("String", "CRM_BASE_URL", quotedBuildConfig(embeddedCrmBaseUrl.trimEnd('/')))
     }

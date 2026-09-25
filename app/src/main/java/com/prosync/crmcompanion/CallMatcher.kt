@@ -9,14 +9,21 @@ object CallMatcher {
         calls: List<SystemCall>,
         sessionStart: Long,
         sessionEnd: Long,
-        numberHint: String?
+        numberHint: String?,
+        expectedDirection: String
     ): Match? {
         return calls
-            .map { call -> Match(call, score(call, sessionStart, sessionEnd, numberHint)) }
+            .map { call -> Match(call, score(call, sessionStart, sessionEnd, numberHint, expectedDirection)) }
             .maxByOrNull { it.score }
     }
 
-    private fun score(call: SystemCall, sessionStart: Long, sessionEnd: Long, numberHint: String?): Int {
+    private fun score(
+        call: SystemCall,
+        sessionStart: Long,
+        sessionEnd: Long,
+        numberHint: String?,
+        expectedDirection: String
+    ): Int {
         var score = 0
 
         val startDelta = abs(call.date - sessionStart)
@@ -36,6 +43,9 @@ object CallMatcher {
         }
 
         if (PhoneUtil.sameNumber(call.number, numberHint)) score += 15
+        if (expectedDirection != "UNKNOWN") {
+            score += if (call.direction == expectedDirection) 35 else -35
+        }
 
         return score
     }
