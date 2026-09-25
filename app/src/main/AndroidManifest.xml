@@ -12,6 +12,8 @@
     <application
         android:name=".ProSyncApp"
         android:allowBackup="false"
+        android:icon="@drawable/ic_prosync_logo"
+        android:roundIcon="@drawable/ic_prosync_logo"
         android:usesCleartextTraffic="true"
         android:label="ProSync CRM Companion"
         android:supportsRtl="true"
@@ -25,6 +27,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CallHistoryActivity"
+            android:exported="false" />
 
         <receiver
             android:name=".PhoneStateReceiver"

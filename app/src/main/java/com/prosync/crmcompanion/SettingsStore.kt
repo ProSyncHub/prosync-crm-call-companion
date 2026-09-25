@@ -42,6 +42,10 @@ class SettingsStore(context: Context) {
         get() = prefs.getString("api_key", "") ?: ""
         set(value) = prefs.edit().putString("api_key", value.trim()).apply()
 
+    var recordingFolderUri: String
+        get() = prefs.getString("recording_folder_uri", "") ?: ""
+        set(value) = prefs.edit().putString("recording_folder_uri", value.trim()).apply()
+
     val deviceId: String
         get() {
             val existing = prefs.getString("device_id", null)

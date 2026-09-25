@@ -87,7 +87,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("recording_status", call.recordingStatus.lowercase())
                 put("recording_file_name", call.recordingName ?: "")
                 put("recording_match_confidence", if (call.recordingUri == null) "none" else "high")
-                put("app_version", "0.5.2-durable-auto-sync")
+                put("app_version", "0.5.3-recording-discovery")
             }
             text("payload", payload.toString())
             call.recordingUri?.let { uriValue ->
@@ -97,7 +97,10 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
             output.write("--$boundary--\r\n".toByteArray())
         }
         val response = connection.responseCode
-        if (response !in 200..299) throw IllegalStateException("CRM returned HTTP $response")
+        if (response !in 200..299) {
+            val detail = runCatching { connection.errorStream?.bufferedReader()?.readText().orEmpty() }.getOrDefault("")
+            throw IllegalStateException("CRM returned HTTP $response${if (detail.isBlank()) "" else ": ${detail.take(240)}"}")
+        }
         val body = connection.inputStream.bufferedReader().readText()
         val json = JSONObject(body)
         return UploadResponse(
@@ -114,7 +117,8 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
         }
         val response = connection.responseCode
         if (response !in 200..299) {
-            throw IllegalStateException("CRM analyze returned HTTP $response")
+            val detail = runCatching { connection.errorStream?.bufferedReader()?.readText().orEmpty() }.getOrDefault("")
+            throw IllegalStateException("CRM analyze returned HTTP $response${if (detail.isBlank()) "" else ": ${detail.take(240)}"}")
         }
     }
 }

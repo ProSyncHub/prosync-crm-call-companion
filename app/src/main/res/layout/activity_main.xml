@@ -11,11 +11,20 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="ProSync" android:textColor="@color/ink" android:textSize="30sp" android:textStyle="bold" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginBottom="18dp" android:text="CRM Call Companion"
-            android:textColor="@color/muted_ink" android:textSize="16sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginBottom="18dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView android:layout_width="56dp" android:layout_height="56dp"
+                android:contentDescription="ProSync CRM" android:src="@drawable/ic_prosync_logo" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="ProSync CRM" android:textColor="@color/ink" android:textSize="24sp" android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Call Companion" android:textColor="@color/muted_ink" android:textSize="14sp" />
+            </LinearLayout>
+            <Button android:id="@+id/callsButton" android:layout_width="wrap_content"
+                android:layout_height="48dp" android:text="Calls" android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView android:id="@+id/captureStatus" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:background="@drawable/rounded_panel"
@@ -70,6 +79,12 @@
             <Button android:id="@+id/permissionsButton" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Grant required permissions" />
             <TextView android:id="@+id/permissionStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:textColor="@color/muted_ink" android:textSize="12sp" />
+            <Button android:id="@+id/recordingFolderButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="10dp"
+                android:text="Choose call recordings folder" />
+            <TextView android:id="@+id/recordingFolderStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="8dp"
                 android:textColor="@color/muted_ink" android:textSize="12sp" />
         </LinearLayout>

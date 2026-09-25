@@ -1,19 +1,26 @@
 package com.prosync.crmcompanion
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 
 object ActiveUserNotification {
     private const val CHANNEL_ID = "prosync_active_user"
     private const val NOTIFICATION_ID = 4101
 
     fun show(context: Context) {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
         val settings = SettingsStore(context)
         ensureChannel(context)
         val openAppIntent = Intent(context, MainActivity::class.java).apply {

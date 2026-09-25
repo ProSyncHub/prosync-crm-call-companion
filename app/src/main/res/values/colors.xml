@@ -9,4 +9,6 @@
     <color name="capture_off">#DC2626</color>
     <color name="capture_on_surface">#D1FAE5</color>
     <color name="capture_off_surface">#FEE2E2</color>
+    <color name="pending_surface">#FEF3C7</color>
+    <color name="brand_orange">#C2410C</color>
 </resources>

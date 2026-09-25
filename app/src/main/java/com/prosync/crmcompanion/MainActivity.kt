@@ -1,6 +1,7 @@
 package com.prosync.crmcompanion
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -37,6 +38,22 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { refreshUi() }
 
+    private val recordingFolderLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            settings.recordingFolderUri = uri.toString()
+            if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this, 0)
+            refreshUi()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -49,6 +66,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.syncEmployeesButton).setOnClickListener { syncEmployees() }
+        findViewById<Button>(R.id.callsButton).setOnClickListener {
+            startActivity(Intent(this, CallHistoryActivity::class.java))
+        }
+        findViewById<Button>(R.id.recordingFolderButton).setOnClickListener {
+            recordingFolderLauncher.launch(null)
+        }
         findViewById<AutoCompleteTextView>(R.id.employeeName).setOnItemClickListener { parent, _, position, _ ->
             val selected = parent.getItemAtPosition(position) as EmployeeOption
             pendingEmployee = selected
@@ -143,6 +166,11 @@ class MainActivity : AppCompatActivity() {
         val notificationsOk = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         findViewById<TextView>(R.id.permissionStatus).text =
             "Call log: ${if (callLogOk) "✓" else "✗"}    Phone state: ${if (phoneStateOk) "✓" else "✗"}    Audio: ${if (audioOk) "✓" else "✗"}    Notification: ${if (notificationsOk) "✓" else "✗"}"
+        findViewById<TextView>(R.id.recordingFolderStatus).text = if (settings.recordingFolderUri.isBlank()) {
+            "Automatic media scan active. If recordings remain pending, choose the native Phone app's call-recordings folder once."
+        } else {
+            "Call-recordings folder connected ✓"
+        }
 
         val df = SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault())
         val captureStatus = findViewById<TextView>(R.id.captureStatus)

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/rounded_panel"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="horizontal">
+        <TextView android:id="@+id/callDirection" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:textColor="@color/ink" android:textSize="15sp" android:textStyle="bold" />
+        <TextView android:id="@+id/callCrmState" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:background="@drawable/status_pill" android:paddingHorizontal="10dp" android:paddingVertical="5dp"
+            android:textColor="@color/ink" android:textSize="10sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView android:id="@+id/callNumber" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold" />
+    <TextView android:id="@+id/callTime" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="4dp" android:textColor="@color/muted_ink" android:textSize="12sp" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" android:orientation="horizontal">
+        <TextView android:id="@+id/callRecordingState" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:textColor="@color/muted_ink" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/callAnalysisState" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:gravity="end" android:textColor="@color/muted_ink" android:textSize="11sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" android:text="Tap for complete details"
+        android:textColor="@color/brand_orange" android:textSize="11sp" android:textStyle="bold" />
+</LinearLayout>
