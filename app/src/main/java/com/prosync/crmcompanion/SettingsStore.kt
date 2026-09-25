@@ -46,6 +46,14 @@ class SettingsStore(context: Context) {
         get() = prefs.getString("recording_folder_uri", "") ?: ""
         set(value) = prefs.edit().putString("recording_folder_uri", value.trim()).apply()
 
+    var recordingScanCompletedAt: Long
+        get() = prefs.getLong("recording_scan_completed_at", 0L)
+        set(value) = prefs.edit().putLong("recording_scan_completed_at", value).apply()
+
+    var recordingScanSummary: String
+        get() = prefs.getString("recording_scan_summary", "") ?: ""
+        set(value) = prefs.edit().putString("recording_scan_summary", value).apply()
+
     val deviceId: String
         get() {
             val existing = prefs.getString("device_id", null)

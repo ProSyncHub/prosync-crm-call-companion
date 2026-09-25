@@ -23,8 +23,8 @@ android {
         applicationId = "com.prosync.crmcompanion"
         minSdk = 29
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.5.3-recording-discovery"
+        versionCode = 9
+        versionName = "0.5.4-auto-phone-scan"
         buildConfigField("String", "MOBILE_SYNC_API_KEY", quotedBuildConfig(embeddedMobileSyncApiKey))
         buildConfigField("String", "CRM_BASE_URL", quotedBuildConfig(embeddedCrmBaseUrl.trimEnd('/')))
     }

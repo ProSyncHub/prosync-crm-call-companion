@@ -36,7 +36,10 @@ class MainActivity : AppCompatActivity() {
 
     private val permissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { refreshUi() }
+    ) {
+        refreshUi()
+        if (hasAudioPermission()) scanRecordingLocations()
+    }
 
     private val recordingFolderLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -50,7 +53,7 @@ class MainActivity : AppCompatActivity() {
             }
             settings.recordingFolderUri = uri.toString()
             if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this, 0)
-            refreshUi()
+            scanRecordingLocations()
         }
     }
 
@@ -72,6 +75,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.recordingFolderButton).setOnClickListener {
             recordingFolderLauncher.launch(null)
         }
+        findViewById<Button>(R.id.scanRecordingsButton).setOnClickListener { scanRecordingLocations() }
         findViewById<AutoCompleteTextView>(R.id.employeeName).setOnItemClickListener { parent, _, position, _ ->
             val selected = parent.getItemAtPosition(position) as EmployeeOption
             pendingEmployee = selected
@@ -101,6 +105,12 @@ class MainActivity : AppCompatActivity() {
                 SyncScheduler.disableCapture(this)
                 ActiveUserNotification.cancel(this)
                 refreshUi()
+                return@setOnClickListener
+            }
+
+            if (settings.recordingScanCompletedAt == 0L) {
+                findViewById<TextView>(R.id.captureStatus).text =
+                    "COMPLETE STEP 1\nScan the phone for recording locations before turning capture on."
                 return@setOnClickListener
             }
 
@@ -137,6 +147,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         refreshUi()
+        if (hasAudioPermission() && settings.recordingScanCompletedAt == 0L) {
+            window.decorView.post { scanRecordingLocations() }
+        }
     }
 
     override fun onResume() {
@@ -167,9 +180,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.permissionStatus).text =
             "Call log: ${if (callLogOk) "✓" else "✗"}    Phone state: ${if (phoneStateOk) "✓" else "✗"}    Audio: ${if (audioOk) "✓" else "✗"}    Notification: ${if (notificationsOk) "✓" else "✗"}"
         findViewById<TextView>(R.id.recordingFolderStatus).text = if (settings.recordingFolderUri.isBlank()) {
-            "Automatic media scan active. If recordings remain pending, choose the native Phone app's call-recordings folder once."
+            "Direct folder access: not needed unless Android hides the folder from automatic scanning."
         } else {
             "Call-recordings folder connected ✓"
+        }
+        findViewById<TextView>(R.id.recordingScanStatus).text = when {
+            !audioOk -> "Grant the Audio permission to run the automatic phone scan."
+            settings.recordingScanSummary.isNotBlank() -> settings.recordingScanSummary
+            else -> "Ready to scan the phone automatically for call recordings."
         }
 
         val df = SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault())
@@ -218,6 +236,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun syncEmployees() {
+        if (settings.recordingScanCompletedAt == 0L) {
+            findViewById<TextView>(R.id.employeeVerificationStatus).text =
+                "Complete Step 1 phone scan before employee login."
+            return
+        }
         val button = findViewById<Button>(R.id.syncEmployeesButton)
         button.isEnabled = false; button.text = "Syncing employees…"
         lifecycleScope.launch {
@@ -235,6 +258,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun verifyEmployee() {
+        if (settings.recordingScanCompletedAt == 0L) {
+            findViewById<TextView>(R.id.employeeVerificationStatus).text =
+                "Complete Step 1 phone scan before employee login."
+            return
+        }
         val selected = pendingEmployee ?: employees.firstOrNull {
             it.name.equals(findViewById<AutoCompleteTextView>(R.id.employeeName).text.toString(), true)
         }
@@ -320,6 +348,38 @@ class MainActivity : AppCompatActivity() {
         return (0 until array.length()).map { index ->
             val item = array.getJSONObject(index)
             EmployeeOption(item.getString("id"), item.getString("name"), item.getString("email"), item.optString("department", "unassigned"))
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun scanRecordingLocations() {
+        val status = findViewById<TextView>(R.id.recordingScanStatus)
+        val button = findViewById<Button>(R.id.scanRecordingsButton)
+        if (!hasAudioPermission()) {
+            status.text = "Grant the Audio permission first so ProSync can scan the phone."
+            return
+        }
+        button.isEnabled = false
+        button.text = "Scanning phone…"
+        status.text = "Scanning the Android media catalog and detecting recording locations…"
+        lifecycleScope.launch {
+            runCatching { withContext(Dispatchers.IO) { RecordingLocationDiscovery.scan(this@MainActivity) } }
+                .onSuccess { result ->
+                    settings.recordingScanCompletedAt = System.currentTimeMillis()
+                    settings.recordingScanSummary = result.summary()
+                    status.text = settings.recordingScanSummary
+                    if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this@MainActivity, 0)
+                }
+                .onFailure {
+                    status.text = "Phone scan failed: ${it.message ?: "Android did not expose audio storage"}"
+                }
+            button.isEnabled = true
+            button.text = "Scan phone again"
+            refreshUi()
         }
     }
 }

@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/app_background"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/app_background" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginBottom="18dp" android:gravity="center_vertical" android:orientation="horizontal">
+            android:layout_marginBottom="14dp" android:gravity="center_vertical" android:orientation="horizontal">
             <ImageView android:layout_width="56dp" android:layout_height="56dp"
                 android:contentDescription="ProSync CRM" android:src="@drawable/ic_prosync_logo" />
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
@@ -20,25 +14,74 @@
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="ProSync CRM" android:textColor="@color/ink" android:textSize="24sp" android:textStyle="bold" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="Call Companion" android:textColor="@color/muted_ink" android:textSize="14sp" />
+                    android:text="Automatic Call Companion" android:textColor="@color/muted_ink" android:textSize="13sp" />
             </LinearLayout>
             <Button android:id="@+id/callsButton" android:layout_width="wrap_content"
                 android:layout_height="48dp" android:text="Calls" android:textStyle="bold" />
         </LinearLayout>
 
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@drawable/rounded_panel" android:padding="14dp"
+            android:text="Setup once: scan phone → sign in employee → turn capture on"
+            android:textColor="@color/brand_orange" android:textSize="13sp" android:textStyle="bold" />
+
+        <TextView style="@style/SectionTitle" android:text="1 · Scan phone for recordings" />
+        <LinearLayout style="@style/Panel" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="ProSync scans every audio location Android makes available and automatically identifies native call-recording folders."
+                android:textColor="@color/ink" android:textSize="13sp" />
+            <Button android:id="@+id/permissionsButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Grant phone and audio access" />
+            <TextView android:id="@+id/permissionStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:textColor="@color/muted_ink" android:textSize="12sp" />
+            <Button android:id="@+id/scanRecordingsButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Scan phone automatically" />
+            <TextView android:id="@+id/recordingScanStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:background="@drawable/status_pill" android:padding="12dp"
+                android:textColor="@color/ink" android:textSize="12sp" android:textStyle="bold" />
+            <Button android:id="@+id/recordingFolderButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="10dp"
+                android:text="Android hid it? Choose folder once" />
+            <TextView android:id="@+id/recordingFolderStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:textColor="@color/muted_ink" android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView style="@style/SectionTitle" android:text="2 · Sign in employee" />
+        <LinearLayout style="@style/Panel" android:orientation="vertical">
+            <AutoCompleteTextView android:id="@+id/employeeName" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:completionThreshold="1"
+                android:hint="Search and select CRM employee" android:inputType="textPersonName" />
+            <Button android:id="@+id/syncEmployeesButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Load employees from CRM" />
+            <EditText android:id="@+id/employeePassword" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:hint="CRM / Workforce password" android:inputType="textPassword" android:autofillHints="password" />
+            <Button android:id="@+id/verifyEmployeeButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Verify and sign in" />
+            <Button android:id="@+id/clearEmployeeButton" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Sign out employee · continue unassigned" />
+            <TextView android:id="@+id/employeeVerificationStatus" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:text="Complete Step 1, then sign in." android:textColor="@color/muted_ink" android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView style="@style/SectionTitle" android:text="3 · Automatic capture" />
         <TextView android:id="@+id/captureStatus" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:background="@drawable/rounded_panel"
-            android:gravity="center" android:padding="22dp" android:text="CAPTURE OFF"
-            android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+            android:gravity="center" android:padding="20dp" android:text="CAPTURE OFF"
+            android:textColor="@color/ink" android:textSize="17sp" android:textStyle="bold" />
         <Button android:id="@+id/captureToggleButton" android:layout_width="match_parent"
-            android:layout_height="56dp" android:layout_marginTop="12dp"
+            android:layout_height="56dp" android:layout_marginTop="10dp"
             android:text="TURN CAPTURE ON" android:textStyle="bold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:gravity="center"
-            android:text="When OFF, this app does not capture call history, scan recordings, or upload anything."
-            android:textColor="@color/muted_ink" android:textSize="12sp" />
+            android:layout_marginTop="8dp" android:gravity="center"
+            android:text="When ON, calls sync automatically after ending. When OFF, nothing is captured or uploaded."
+            android:textColor="@color/muted_ink" android:textSize="11sp" />
 
-        <TextView style="@style/SectionTitle" android:text="1 · Connection" />
+        <TextView style="@style/SectionTitle" android:text="Connection and device" />
         <LinearLayout style="@style/Panel" android:orientation="vertical">
             <TextView android:id="@+id/connectionStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="CRM connection built into the app"
@@ -50,49 +93,10 @@
                 android:textColor="@color/muted_ink" android:textSize="12sp" />
         </LinearLayout>
 
-        <TextView style="@style/SectionTitle" android:text="2 · Employee" />
-        <LinearLayout style="@style/Panel" android:orientation="vertical">
-            <AutoCompleteTextView android:id="@+id/employeeName" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:completionThreshold="1"
-                android:hint="Search and select CRM employee" android:inputType="textPersonName" />
-            <Button android:id="@+id/syncEmployeesButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Load employees from CRM" />
-            <EditText android:id="@+id/employeePassword" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:hint="CRM / Workforce password" android:inputType="textPassword"
-                android:autofillHints="password" />
-            <Button android:id="@+id/verifyEmployeeButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Verify &amp; use employee" />
-            <Button android:id="@+id/clearEmployeeButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Sign out employee · continue unassigned" />
-            <TextView android:id="@+id/employeeVerificationStatus" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:text="No verified employee. Calls will be unassigned."
-                android:textColor="@color/muted_ink" android:textSize="12sp" />
-        </LinearLayout>
-
-        <TextView style="@style/SectionTitle" android:text="3 · Phone setup" />
-        <LinearLayout style="@style/Panel" android:orientation="vertical">
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Enable automatic call recording in the phone's native Phone app. ProSync securely matches and uploads those files after each call."
-                android:textColor="@color/ink" android:textSize="13sp" />
-            <Button android:id="@+id/permissionsButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Grant required permissions" />
-            <TextView android:id="@+id/permissionStatus" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:textColor="@color/muted_ink" android:textSize="12sp" />
-            <Button android:id="@+id/recordingFolderButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="10dp"
-                android:text="Choose call recordings folder" />
-            <TextView android:id="@+id/recordingFolderStatus" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                android:textColor="@color/muted_ink" android:textSize="12sp" />
-        </LinearLayout>
-
-        <TextView style="@style/SectionTitle" android:text="Sync &amp; diagnostics" />
+        <TextView style="@style/SectionTitle" android:text="Diagnostics" />
         <LinearLayout style="@style/Panel" android:orientation="vertical">
             <Button android:id="@+id/syncButton" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Sync now" />
+                android:layout_height="wrap_content" android:text="Retry pending CRM work now" />
             <Button android:id="@+id/recoveryScanButton" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="Recover missed calls" />
             <Button android:id="@+id/refreshButton" android:layout_width="match_parent"
@@ -107,7 +111,7 @@
 
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="16dp" android:gravity="center"
-            android:text="Calls are queued safely offline and keep their original date and time."
+            android:text="Offline calls stay queued with their original date and time."
             android:textColor="@color/muted_ink" android:textSize="11sp" />
     </LinearLayout>
 </ScrollView>

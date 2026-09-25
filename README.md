@@ -53,7 +53,7 @@ The internal APK receives `MOBILE_SYNC_API_KEY` and `CRM_BASE_URL` as Gradle bui
 
 Use one Samsung Galaxy A55 first.
 
-If Samsung's native call recording is not visible through the normal Audio permission, tap **Choose call recordings folder** once and select the folder used by the Phone app (commonly `Internal storage/Recordings/Call`). Android persists this read permission; recording discovery, CRM upload, transcription, and AI analysis remain automatic after every later call.
+On first setup the app automatically scans every audio location exposed by Android, reports the likely call-recording folders it found, and only then enables employee login/capture setup. If Samsung's native call recording is not visible through the normal Audio permission, tap **Android hid it? Choose folder once** and select the folder used by the Phone app (commonly `Internal storage/Recordings/Call`). Android persists this read permission; recording discovery, CRM upload, transcription, and AI analysis remain automatic after every later call.
 
 The **Calls** screen shows all locally captured calls and separates the recording, CRM delivery, member-match, and transcript/AI states. A CRM upload can therefore be confirmed even while the native recording file is still pending.
 
