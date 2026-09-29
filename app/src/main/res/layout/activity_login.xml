@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/app_background" android:fillViewport="true" android:fitsSystemWindows="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="vertical" android:padding="24dp">
+
+        <ImageView android:layout_width="64dp" android:layout_height="64dp"
+            android:contentDescription="ProSync" android:src="@drawable/ic_prosync_logo" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp"
+            android:text="Sign in" android:textColor="@color/ink" android:textSize="30sp" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+            android:text="Use your CRM / Workforce login. Call capture starts as soon as you sign in."
+            android:textColor="@color/muted_ink" android:textSize="15sp" />
+
+        <TextView android:id="@+id/recentTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="26dp" android:text="RECENTLY ON THIS PHONE" android:textColor="@color/brand_orange"
+            android:textSize="12sp" android:textStyle="bold" android:visibility="gone" />
+        <HorizontalScrollView android:id="@+id/recentScroll" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:scrollbars="none" android:visibility="gone">
+            <LinearLayout android:id="@+id/recentEmployees" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp"
+            android:text="Your name" android:textColor="@color/ink" android:textStyle="bold" />
+        <AutoCompleteTextView android:id="@+id/loginEmployee" android:layout_width="match_parent" android:layout_height="56dp"
+            android:layout_marginTop="6dp" android:background="@drawable/input_field" android:completionThreshold="1"
+            android:hint="Tap or type your name" android:imeOptions="actionNext" android:inputType="textPersonName|textNoSuggestions"
+            android:paddingHorizontal="16dp" android:singleLine="true" android:textColor="@color/ink" android:textColorHint="@color/muted_ink" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:text="Password" android:textColor="@color/ink" android:textStyle="bold" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="6dp"
+            android:background="@drawable/input_field" android:gravity="center_vertical" android:orientation="horizontal">
+            <EditText android:id="@+id/loginPassword" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                android:background="@android:color/transparent" android:hint="Password" android:imeOptions="actionDone"
+                android:importantForAutofill="yes" android:inputType="textPassword" android:paddingHorizontal="16dp"
+                android:singleLine="true" android:textColor="@color/ink" android:textColorHint="@color/muted_ink" />
+            <TextView android:id="@+id/togglePassword" android:layout_width="wrap_content" android:layout_height="match_parent"
+                android:gravity="center" android:paddingHorizontal="16dp" android:text="Show" android:textColor="@color/brand_orange"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/loginStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="14dp" android:minHeight="20dp" android:textColor="@color/muted_ink" />
+
+        <Button android:id="@+id/signInButton" android:layout_width="match_parent" android:layout_height="56dp"
+            android:layout_marginTop="8dp" android:background="@drawable/primary_button" android:text="Sign in"
+            android:textAllCaps="false" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" />
+
+        <TextView android:id="@+id/loginSettings" android:layout_width="match_parent" android:layout_height="48dp"
+            android:layout_marginTop="12dp" android:gravity="center" android:text="Phone settings"
+            android:textColor="@color/muted_ink" />
+    </LinearLayout>
+</ScrollView>

@@ -27,18 +27,7 @@
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Keep capture reliable" android:textColor="@color/ink" android:textSize="27sp" android:textStyle="bold" />
             <TextView android:id="@+id/notificationStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/muted_ink" />
             <Button android:id="@+id/notificationPermissionButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="Allow notifications" />
-            <Button android:id="@+id/notificationContinue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Continue" />
+            <Button android:id="@+id/notificationContinue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Finish setup and sign in" />
         </LinearLayout>
-        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="28dp" android:orientation="vertical">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sign in as the employee" android:textColor="@color/ink" android:textSize="27sp" android:textStyle="bold" />
-                <TextView android:id="@+id/loginStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Load the CRM team and select yourself." android:textColor="@color/muted_ink" />
-                <Button android:id="@+id/reloadEmployeesButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="Load CRM employees" />
-                <AutoCompleteTextView android:id="@+id/onboardingEmployee" android:layout_width="match_parent" android:layout_height="56dp" android:hint="Select employee" android:inputType="none" />
-                <EditText android:id="@+id/onboardingPassword" android:layout_width="match_parent" android:layout_height="56dp" android:hint="CRM / Workforce password" android:inputType="textPassword" />
-                <Button android:id="@+id/verifyOnboardingEmployee" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Verify employee" />
-                <Button android:id="@+id/finishOnboardingButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Finish setup" />
-            </LinearLayout>
-        </ScrollView>
     </ViewFlipper>
 </LinearLayout>

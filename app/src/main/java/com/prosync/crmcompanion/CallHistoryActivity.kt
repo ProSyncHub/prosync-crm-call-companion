@@ -112,8 +112,8 @@ class CallHistoryActivity : AppCompatActivity() {
     private fun recordingLabel(call: CallRecord) = when {
         call.recordingUri != null -> "Recording found"
         call.durationSeconds <= 0L -> "No recording expected"
-        call.recordingStatus == "NOT_FOUND" -> "Recording not found"
-        else -> "Waiting for native recording"
+        call.recordingStatus == "NOT_FOUND" -> "No recording on phone"
+        else -> "Looking for recording (up to 3 h)"
     }
 
     private fun crmLabel(call: CallRecord) = when (call.syncStatus) {
@@ -122,9 +122,11 @@ class CallHistoryActivity : AppCompatActivity() {
         else -> "Queued for automatic CRM sync"
     }
 
-    private fun analysisLabel(call: CallRecord) = when (call.analysisStatus) {
-        "COMPLETE" -> "Transcript and AI ready"
-        "UNMATCHED" -> "Waiting for member match"
-        else -> if (call.recordingUri == null) "Waiting for recording" else "Queued for transcript and AI"
+    private fun analysisLabel(call: CallRecord) = when {
+        call.analysisStatus == "COMPLETE" -> "Transcribing in CRM"
+        call.analysisStatus == "UNMATCHED" -> "Waiting for member match"
+        call.analysisStatus == "NO_RECORDING" || call.recordingStatus == "NOT_FOUND" || call.durationSeconds <= 0L -> "Call logged · no audio"
+        call.recordingUri == null -> "Waiting for recording"
+        else -> "Queued for transcript and AI"
     }
 }

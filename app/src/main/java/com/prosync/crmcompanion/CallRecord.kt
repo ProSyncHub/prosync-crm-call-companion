@@ -22,5 +22,6 @@ data class CallRecord(
     val recordingStatus: String = "PENDING",
     val syncStatus: String = "PENDING",
     val syncError: String? = null,
-    val analysisStatus: String = "PENDING"
+    val analysisStatus: String = "PENDING",
+    val directionResync: Boolean = false
 )

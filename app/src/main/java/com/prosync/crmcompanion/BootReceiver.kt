@@ -7,9 +7,10 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            SyncScheduler.schedulePeriodicSync(context)
+            SyncScheduler.enqueueRecordingAndSync(context, 0)
             if (SettingsStore(context).shiftActive) {
                 SyncScheduler.scheduleRecovery(context)
-                SyncScheduler.enqueueRecordingAndSync(context, 0)
                 ActiveUserNotification.show(context)
             }
         }

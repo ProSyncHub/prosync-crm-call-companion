@@ -58,6 +58,16 @@ class SettingsStore(context: Context) {
         get() = prefs.getString("recording_scan_summary", "") ?: ""
         set(value) = prefs.edit().putString("recording_scan_summary", value).apply()
 
+    /** Employees who signed in on this phone, newest first (JSON array). */
+    var recentEmployeesJson: String
+        get() = prefs.getString("recent_employees", "[]") ?: "[]"
+        set(value) = prefs.edit().putString("recent_employees", value).apply()
+
+    /** Last employee list from CRM, so the sign-in screen opens instantly. */
+    var cachedEmployeesJson: String
+        get() = prefs.getString("cached_employees", "[]") ?: "[]"
+        set(value) = prefs.edit().putString("cached_employees", value).apply()
+
     val deviceId: String
         get() {
             val existing = prefs.getString("device_id", null)

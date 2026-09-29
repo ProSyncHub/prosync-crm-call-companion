@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", null, 5) {
+class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", null, 6) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -34,6 +34,7 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
               sync_status TEXT NOT NULL DEFAULT 'PENDING',
               sync_error TEXT,
               analysis_status TEXT NOT NULL DEFAULT 'PENDING',
+              direction_resync INTEGER NOT NULL DEFAULT 0,
               created_at INTEGER NOT NULL
             )
             """.trimIndent()
@@ -50,6 +51,15 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         }
         if (oldVersion < 4) db.execSQL("ALTER TABLE calls ADD COLUMN employee_email TEXT NOT NULL DEFAULT ''")
         if (oldVersion < 5) db.execSQL("ALTER TABLE calls ADD COLUMN analysis_status TEXT NOT NULL DEFAULT 'PENDING'")
+        if (oldVersion < 6) {
+            // CRM builds before this one tagged every OUTGOING call as inbound. Re-send the
+            // metadata of every already-synced call once so the CRM can correct it.
+            db.execSQL("ALTER TABLE calls ADD COLUMN direction_resync INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE calls SET direction_resync = 1 WHERE sync_status = 'SYNCED'")
+            // Calls with no audio (missed / 0 seconds) waited forever for a recording and
+            // blocked the sync queue. Release them.
+            db.execSQL("UPDATE calls SET recording_status = 'NOT_FOUND' WHERE recording_status = 'PENDING' AND duration_seconds <= 0")
+        }
     }
 
     fun exists(callLogId: Long): Boolean {
@@ -98,8 +108,8 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
 
     fun pendingCount(): Int {
         readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM calls WHERE sync_status != ? OR recording_status = ? OR analysis_status NOT IN (?, ?)",
-            arrayOf("SYNCED", "PENDING", "COMPLETE", "UNMATCHED")
+            "SELECT COUNT(*) FROM calls WHERE $PENDING_WHERE",
+            PENDING_ARGS
         ).use { c -> return if (c.moveToFirst()) c.getInt(0) else 0 }
     }
 
@@ -113,17 +123,21 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         return rows
     }
 
-    fun pendingSync(limit: Int = 50): List<CallRecord> {
+    fun pendingSync(limit: Int = 100): List<CallRecord> {
         val rows = mutableListOf<CallRecord>()
         readableDatabase.query(
             "calls", null,
-            "sync_status != ? OR recording_status = ? OR (recording_uri IS NOT NULL AND analysis_status != ?)",
-            arrayOf("SYNCED", "PENDING", "COMPLETE"), null, null, "started_at ASC", limit.toString()
+            // Newest first: today's calls reach the CRM before an old backlog drains.
+            PENDING_WHERE, PENDING_ARGS, null, null, "started_at DESC", limit.toString()
         ).use { c ->
             while (c.moveToNext()) rows += c.toRecord()
         }
         return rows
     }
+
+    fun find(callLogId: Long): CallRecord? =
+        readableDatabase.query("calls", null, "call_log_id = ?", arrayOf(callLogId.toString()), null, null, null, "1")
+            .use { c -> if (c.moveToFirst()) c.toRecord() else null }
 
     fun attachRecording(callLogId: Long, uri: String, name: String) {
         writableDatabase.update("calls", ContentValues().apply {
@@ -131,7 +145,10 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         }, "call_log_id = ?", arrayOf(callLogId.toString()))
     }
 
-    fun markRecordingUnavailable(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("recording_status", "NOT_FOUND") }, "call_log_id = ?", arrayOf(callLogId.toString()))
+    fun markRecordingUnavailable(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply {
+        put("recording_status", "NOT_FOUND"); put("analysis_status", "NO_RECORDING")
+    }, "call_log_id = ?", arrayOf(callLogId.toString()))
+    fun markDirectionResynced(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("direction_resync", 0) }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markWaitingForRecording(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply {
         put("recording_status", "PENDING"); put("sync_status", "SYNCED"); put("analysis_status", "PENDING")
         put("sync_error", "CRM synced · waiting for the native phone recording")
@@ -174,7 +191,8 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         recordingUri = stringOrNull("recording_uri"), recordingName = stringOrNull("recording_name"),
         recordingStatus = getString(getColumnIndexOrThrow("recording_status")), syncStatus = getString(getColumnIndexOrThrow("sync_status")),
         syncError = stringOrNull("sync_error"),
-        analysisStatus = getString(getColumnIndexOrThrow("analysis_status"))
+        analysisStatus = getString(getColumnIndexOrThrow("analysis_status")),
+        directionResync = getInt(getColumnIndexOrThrow("direction_resync")) == 1
     )
 
     private fun Cursor.stringOrNull(name: String): String? {
@@ -190,5 +208,14 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
     private fun Cursor.intOrNull(name: String): Int? {
         val i = getColumnIndexOrThrow(name)
         return if (isNull(i)) null else getInt(i)
+    }
+
+    companion object {
+        // A row needs work when it never reached the CRM, is still looking for its
+        // recording, has a recording whose AI hand-off is unconfirmed, or needs its
+        // direction re-sent. Finished rows (COMPLETE / UNMATCHED / NO_RECORDING) never match.
+        private const val PENDING_WHERE =
+            "sync_status != ? OR recording_status = ? OR (recording_uri IS NOT NULL AND analysis_status = ?) OR direction_resync = 1"
+        private val PENDING_ARGS = arrayOf("SYNCED", "PENDING", "PENDING")
     }
 }

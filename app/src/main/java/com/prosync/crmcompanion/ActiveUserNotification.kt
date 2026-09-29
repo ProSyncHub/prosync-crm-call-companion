@@ -36,7 +36,7 @@ object ActiveUserNotification {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_phone_call)
             .setContentTitle("ProSync call capture is on")
-            .setContentText("Calling as $employee • tap to switch employee")
+            .setContentText("Signed in as $employee • tap to open")
             .setStyle(NotificationCompat.BigTextStyle().bigText("Normal SIM calls are being captured for CRM as $employee. Tap to open the employee selector."))
             .setContentIntent(pendingIntent)
             .setOngoing(true)

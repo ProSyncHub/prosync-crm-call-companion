@@ -11,25 +11,44 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
 
+private const val RECORDING_WAIT_MS = 3 * 60 * 60 * 1000L
+
 class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val db = CallDb(applicationContext); val settings = SettingsStore(applicationContext)
-        if (!settings.shiftActive) return@withContext Result.success()
+        // Uploading is independent of capture: calls captured before capture was turned
+        // off must still reach the CRM.
+        if (settings.apiBaseUrl.isBlank() || settings.apiKey.isBlank()) return@withContext Result.retry()
         var retryNeeded = false
         db.pendingSync().forEach { original ->
             var call = original
             if (call.recordingStatus == "PENDING") {
                 val found = runCatching { RecordingScanner.findForCall(applicationContext, call) }.getOrNull()
-                if (found != null) db.attachRecording(call.callLogId, found.uri, found.name)
-                call = db.pendingSync().firstOrNull { it.callLogId == call.callLogId } ?: call
+                val callEnded = call.startedAt + call.durationSeconds * 1000L
+                when {
+                    found != null -> db.attachRecording(call.callLogId, found.uri, found.name)
+                    // No audio exists for unanswered calls, and OEM recorders write within
+                    // minutes; stop waiting so the row cannot block the queue forever.
+                    call.durationSeconds <= 0L || System.currentTimeMillis() - callEnded > RECORDING_WAIT_MS ->
+                        db.markRecordingUnavailable(call.callLogId)
+                }
+                call = db.find(call.callLogId) ?: call
             }
-            if (settings.apiBaseUrl.isBlank() || settings.apiKey.isBlank()) {
-                retryNeeded = true
+
+            val needsUpload = call.syncStatus != "SYNCED" ||
+                (call.recordingUri != null && call.analysisStatus == "PENDING")
+            if (!needsUpload && !call.directionResync) {
+                // Already in CRM and still waiting for the phone's recorder to finish.
+                if (call.recordingStatus == "PENDING") retryNeeded = true
                 return@forEach
             }
-            runCatching { upload(call, settings) }
+            val includeRecording = needsUpload && call.recordingUri != null
+
+            runCatching { upload(call, settings, includeRecording) }
                 .onSuccess { response ->
+                    if (call.directionResync) db.markDirectionResynced(call.callLogId)
                     when {
+                      !needsUpload -> Unit
                       response.unmatchedCallId.isNotBlank() -> {
                         db.markUnmatchedSynced(call.callLogId)
                       }
@@ -37,20 +56,23 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                         retryNeeded = true
                         db.markRecordingUploadPending(call.callLogId, response.recordingWarning)
                       }
-                      call.recordingUri != null && response.callLogId.isNotBlank() -> {
-                        runCatching { analyze(response.callLogId, settings) }
-                            .onSuccess {
-                                db.markAnalysisComplete(call.callLogId)
-                                db.markSynced(call.callLogId)
-                            }
-                            .onFailure {
-                                retryNeeded = true
-                                db.markAnalysisPending(call.callLogId, it.message ?: "Transcription and AI analysis failed")
-                            }
+                      includeRecording && response.callLogId.isNotBlank() -> {
+                        // New CRM builds transcribe in the background and retry on their own.
+                        val handedOff = response.analysisQueued || runCatching { analyze(response.callLogId, settings) }.isSuccess
+                        if (handedOff) {
+                            db.markAnalysisComplete(call.callLogId)
+                            db.markSynced(call.callLogId)
+                        } else {
+                            retryNeeded = true
+                            db.markAnalysisPending(call.callLogId, "CRM did not confirm transcription; will retry")
+                        }
                       }
-                      response.callLogId.isNotBlank() -> {
+                      response.callLogId.isNotBlank() && call.recordingStatus == "PENDING" -> {
                         retryNeeded = true
                         db.markWaitingForRecording(call.callLogId)
+                      }
+                      response.callLogId.isNotBlank() -> {
+                        db.markSynced(call.callLogId)
                       }
                       else -> {
                         retryNeeded = true
@@ -60,15 +82,20 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 }
                 .onFailure {
                     retryNeeded = true
-                    db.markSyncFailed(call.callLogId, it.message ?: "Sync failed")
+                    if (needsUpload) db.markSyncFailed(call.callLogId, it.message ?: "Sync failed")
                 }
         }
         if (retryNeeded) Result.retry() else Result.success()
     }
 
-    data class UploadResponse(val callLogId: String, val unmatchedCallId: String, val recordingWarning: String)
+    data class UploadResponse(
+        val callLogId: String,
+        val unmatchedCallId: String,
+        val recordingWarning: String,
+        val analysisQueued: Boolean
+    )
 
-    private fun upload(call: CallRecord, settings: SettingsStore): UploadResponse {
+    private fun upload(call: CallRecord, settings: SettingsStore, includeRecording: Boolean): UploadResponse {
         val boundary = "ProSync-${System.currentTimeMillis()}"
         val connection = (URL("${settings.apiBaseUrl}/api/mobile/calls").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; doOutput = true; connectTimeout = 20_000; readTimeout = 60_000
@@ -94,7 +121,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("app_version", BuildConfig.VERSION_NAME)
             }
             text("payload", payload.toString())
-            call.recordingUri?.let { uriValue ->
+            call.recordingUri?.takeIf { includeRecording }?.let { uriValue ->
                 output.write("--$boundary\r\nContent-Disposition: form-data; name=\"recording\"; filename=\"${call.recordingName ?: "call.m4a"}\"\r\nContent-Type: audio/*\r\n\r\n".toByteArray())
                 applicationContext.contentResolver.openInputStream(Uri.parse(uriValue))!!.use { it.copyTo(output) }; output.write("\r\n".toByteArray())
             }
@@ -108,9 +135,10 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
         val body = connection.inputStream.bufferedReader().readText()
         val json = JSONObject(body)
         return UploadResponse(
-            callLogId = json.optString("callLogId", ""),
-            unmatchedCallId = json.optString("unmatchedCallId", ""),
-            recordingWarning = json.optString("recordingWarning", "")
+            callLogId = json.cleanString("callLogId"),
+            unmatchedCallId = json.cleanString("unmatchedCallId"),
+            recordingWarning = json.cleanString("recordingWarning"),
+            analysisQueued = json.optBoolean("analysisQueued", false)
         )
     }
 
@@ -127,3 +155,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
         }
     }
 }
+
+/** org.json's optString turns a JSON null into the text "null"; treat it as empty. */
+private fun JSONObject.cleanString(name: String): String =
+    if (isNull(name)) "" else optString(name, "").trim()

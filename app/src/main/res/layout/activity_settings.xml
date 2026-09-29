@@ -7,7 +7,7 @@
         </LinearLayout>
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="EMPLOYEE" android:textColor="@color/brand_orange" android:textStyle="bold" />
         <TextView android:id="@+id/settingsEmployee" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
-        <Button android:id="@+id/changeEmployeeButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Change employee / rerun setup" />
+        <Button android:id="@+id/changeEmployeeButton" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:background="@drawable/primary_button" android:text="Sign out" android:textAllCaps="false" android:textColor="#FFFFFF" android:textStyle="bold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="CRM CONNECTION" android:textColor="@color/brand_orange" android:textStyle="bold" />
         <TextView android:id="@+id/settingsConnection" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
         <Button android:id="@+id/testCrmButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Test CRM connection" />
@@ -20,6 +20,7 @@
         <Button android:id="@+id/rescanButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Scan phone again" />
         <TextView android:id="@+id/settingsFolder" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:textColor="@color/muted_ink" />
         <Button android:id="@+id/chooseFolderButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Choose hidden recording folder" />
+        <Button android:id="@+id/rerunSetupButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="Run phone setup again" android:textAllCaps="false" />
         <TextView android:id="@+id/settingsVersion" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:gravity="center" android:textColor="@color/muted_ink" />
     </LinearLayout>
 </ScrollView>

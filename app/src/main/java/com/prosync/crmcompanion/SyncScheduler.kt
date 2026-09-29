@@ -13,6 +13,22 @@ import java.util.concurrent.TimeUnit
 
 object SyncScheduler {
     private const val CAPTURE_WORK_TAG = "prosync_capture_work"
+    // Upload work is deliberately NOT tagged as capture work: turning capture off must
+    // not cancel the upload of calls that were already captured.
+    private const val SYNC_WORK_TAG = "prosync_sync_work"
+
+    /** Safety net that drains the upload queue even if a one-off sync was dropped by the OS. */
+    fun schedulePeriodicSync(context: Context) {
+        val request = PeriodicWorkRequestBuilder<RecordingAndSyncWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .addTag(SYNC_WORK_TAG)
+            .build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "prosync_periodic_sync",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
+    }
 
     fun scheduleRecovery(context: Context) {
         val request = PeriodicWorkRequestBuilder<RecoveryScanWorker>(15, TimeUnit.MINUTES)
@@ -70,7 +86,7 @@ object SyncScheduler {
             .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
-            .addTag(CAPTURE_WORK_TAG)
+            .addTag(SYNC_WORK_TAG)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             "prosync_recording_sync",

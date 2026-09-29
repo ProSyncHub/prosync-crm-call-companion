@@ -15,6 +15,15 @@ val embeddedCrmBaseUrl = providers.environmentVariable("CRM_BASE_URL")
     .orElse("https://crm.prosyncedu.com")
     .get()
 
+// An APK without the key cannot reach the CRM ("CRM connection is not built into this app").
+gradle.taskGraph.whenReady {
+    if (embeddedMobileSyncApiKey.isBlank() && allTasks.any { it.name.startsWith("assemble") || it.name.startsWith("bundle") }) {
+        throw GradleException(
+            "MOBILE_SYNC_API_KEY is not set. Add it to ~/.gradle/gradle.properties or the environment before building an APK."
+        )
+    }
+}
+
 android {
     namespace = "com.prosync.crmcompanion"
     compileSdk = 36
@@ -23,8 +32,8 @@ android {
         applicationId = "com.prosync.crmcompanion"
         minSdk = 29
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.6.0-guided-setup"
+        versionCode = 13
+        versionName = "0.8.1-easy-sign-in"
         buildConfigField("String", "MOBILE_SYNC_API_KEY", quotedBuildConfig(embeddedMobileSyncApiKey))
         buildConfigField("String", "CRM_BASE_URL", quotedBuildConfig(embeddedCrmBaseUrl.trimEnd('/')))
     }

@@ -25,7 +25,7 @@ object CrmMobileApi {
         val array = JSONObject(connection.inputStream.bufferedReader().readText()).getJSONArray("employees")
         return (0 until array.length()).map { index ->
             val item = array.getJSONObject(index)
-            EmployeeOption(item.getString("id"), item.getString("name"), item.getString("email"), item.optString("department", "unassigned"))
+            EmployeeOption(item.getString("id"), item.getString("name"), item.getString("email"), item.cleanDepartment())
         }
     }
 
@@ -41,8 +41,15 @@ object CrmMobileApi {
         connection.outputStream.use {
             it.write(JSONObject().put("employeeId", selected.id).put("password", password).toString().toByteArray())
         }
-        if (connection.responseCode !in 200..299) throw IllegalStateException("Invalid CRM / Workforce credentials")
+        when (val code = connection.responseCode) {
+            in 200..299 -> Unit
+            400, 401, 403 -> throw IllegalStateException("Wrong password. Use your CRM / Workforce password.")
+            else -> throw IllegalStateException("CRM is not responding (HTTP $code). Try again in a minute.")
+        }
         val employee = JSONObject(connection.inputStream.bufferedReader().readText()).getJSONObject("employee")
-        return EmployeeOption(employee.getString("id"), employee.getString("name"), employee.getString("email"), employee.optString("department", "unassigned"))
+        return EmployeeOption(employee.getString("id"), employee.getString("name"), employee.getString("email"), employee.cleanDepartment())
     }
 }
+
+private fun JSONObject.cleanDepartment(): String =
+    if (isNull("department")) "unassigned" else optString("department", "unassigned").ifBlank { "unassigned" }

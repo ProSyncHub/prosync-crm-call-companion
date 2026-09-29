@@ -39,7 +39,9 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.testCrmButton).setOnClickListener { testCrm() }
         findViewById<Button>(R.id.rescanButton).setOnClickListener { scanPhone() }
         findViewById<Button>(R.id.chooseFolderButton).setOnClickListener { folderLauncher.launch(null) }
-        findViewById<Button>(R.id.changeEmployeeButton).setOnClickListener {
+        findViewById<Button>(R.id.changeEmployeeButton).setOnClickListener { confirmSignOut() }
+        findViewById<Button>(R.id.rerunSetupButton).setOnClickListener {
+            // Re-checks permissions and recording folders; the employee stays signed in.
             settings.onboardingComplete = false
             startActivity(Intent(this, OnboardingActivity::class.java))
             finishAffinity()
@@ -47,9 +49,28 @@ class SettingsActivity : AppCompatActivity() {
         render()
     }
 
+    private fun confirmSignOut() {
+        if (!EmployeeSession.isSignedIn(this)) {
+            startActivity(Intent(this, LoginActivity::class.java)); finishAffinity(); return
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Sign out ${settings.activeEmployee}?")
+            .setMessage("Call capture stops. Calls already captured will still upload to the CRM.")
+            .setPositiveButton("Sign out") { _, _ ->
+                EmployeeSession.signOut(this)
+                startActivity(Intent(this, LoginActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK))
+                finishAffinity()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun render(message: String? = null) {
         findViewById<EditText>(R.id.settingsDeviceLabel).setText(settings.deviceLabel)
-        findViewById<TextView>(R.id.settingsEmployee).text = "Employee\n${settings.activeEmployee.ifBlank { "Not selected" }}\n${settings.activeEmployeeEmail}"
+        findViewById<TextView>(R.id.settingsEmployee).text = if (EmployeeSession.isSignedIn(this)) {
+            "Signed in as\n${settings.activeEmployee}\n${settings.activeEmployeeEmail}"
+        } else "Nobody is signed in"
+        findViewById<Button>(R.id.changeEmployeeButton).text = if (EmployeeSession.isSignedIn(this)) "Sign out" else "Sign in"
         findViewById<TextView>(R.id.settingsConnection).text = message ?: if (BuildConfig.MOBILE_SYNC_API_KEY.isBlank()) {
             "CRM connection missing from this APK"
         } else "CRM connection built in ✓\n${BuildConfig.CRM_BASE_URL}"
@@ -81,7 +102,7 @@ class SettingsActivity : AppCompatActivity() {
                     settings.recordingScanCompletedAt = System.currentTimeMillis()
                     settings.recordingScanSummary = it.summary()
                     render()
-                    if (settings.shiftActive) SyncScheduler.enqueueRecordingAndSync(this@SettingsActivity, 0)
+                    SyncScheduler.enqueueRecordingAndSync(this@SettingsActivity, 0)
                 }
                 .onFailure { status.text = "Scan failed: ${it.message}" }
         }
