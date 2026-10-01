@@ -10,7 +10,7 @@
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp"
             android:text="Sign in" android:textColor="@color/ink" android:textSize="30sp" android:textStyle="bold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
-            android:text="Use your CRM / Workforce login. Call capture starts as soon as you sign in."
+            android:text="Use your Workforce password. Call capture starts as soon as you sign in."
             android:textColor="@color/muted_ink" android:textSize="15sp" />
 
         <TextView android:id="@+id/recentTitle" android:layout_width="match_parent" android:layout_height="wrap_content"

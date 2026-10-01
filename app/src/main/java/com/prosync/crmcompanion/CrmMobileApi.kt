@@ -43,7 +43,19 @@ object CrmMobileApi {
         }
         when (val code = connection.responseCode) {
             in 200..299 -> Unit
-            400, 401, 403 -> throw IllegalStateException("Wrong password. Use your CRM / Workforce password.")
+            403 -> {
+                val errorCode = runCatching {
+                    JSONObject(connection.errorStream?.bufferedReader()?.readText().orEmpty()).optString("code")
+                }.getOrDefault("")
+                throw IllegalStateException(
+                    when (errorCode) {
+                        "PASSWORD_CHANGE_REQUIRED" -> "Set a new password in Workforce first, then sign in here with it."
+                        "DISABLED" -> "This account is disabled. Ask an administrator to re-activate it in Workforce."
+                        else -> "Wrong password. Use your Workforce password."
+                    }
+                )
+            }
+            400, 401 -> throw IllegalStateException("Wrong password. Use your Workforce password.")
             else -> throw IllegalStateException("CRM is not responding (HTTP $code). Try again in a minute.")
         }
         val employee = JSONObject(connection.inputStream.bufferedReader().readText()).getJSONObject("employee")
