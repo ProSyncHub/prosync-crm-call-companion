@@ -18,7 +18,7 @@ class PhoneStateReceiver : BroadcastReceiver() {
             return
         }
 
-        val employeeAtCallStart = settings.activeEmployee.ifBlank { "UNASSIGNED" }
+        val employeeAtCallStart = settings.activeEmployee.ifBlank { EmployeeSession.NOT_SIGNED_IN }
 
         // Android can deliver this broadcast twice when both READ_PHONE_STATE and READ_CALL_LOG are granted.
         // beginIfNeeded() and finish() make the duplicate broadcasts harmless.

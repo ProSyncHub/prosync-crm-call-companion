@@ -21,7 +21,7 @@ class RecoveryScanWorker(appContext: Context, params: WorkerParameters) : Corout
         if (startedAt <= 0L) return@withContext Result.success()
 
         val db = CallDb(applicationContext)
-        val employee = settings.activeEmployee.ifBlank { "UNASSIGNED" }
+        val employee = settings.activeEmployee.ifBlank { EmployeeSession.NOT_SIGNED_IN }
         val deviceLabel = settings.deviceLabel.ifBlank { android.os.Build.MODEL }
 
         CallLogReader(applicationContext)

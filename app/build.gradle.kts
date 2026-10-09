@@ -32,8 +32,8 @@ android {
         applicationId = "com.prosync.crmcompanion"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.8.2-workforce-sign-in"
+        versionCode = 15
+        versionName = "0.8.3-always-capture"
         buildConfigField("String", "MOBILE_SYNC_API_KEY", quotedBuildConfig(embeddedMobileSyncApiKey))
         buildConfigField("String", "CRM_BASE_URL", quotedBuildConfig(embeddedCrmBaseUrl.trimEnd('/')))
     }

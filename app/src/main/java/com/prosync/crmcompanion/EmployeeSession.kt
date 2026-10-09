@@ -7,6 +7,8 @@ import org.json.JSONObject
 /** Sign-in / sign-out for the employee using this phone. Device setup is separate and one-time. */
 object EmployeeSession {
     private const val MAX_RECENT = 4
+    /** Shown in the CRM for calls made while nobody was signed in on the phone. */
+    const val NOT_SIGNED_IN = "Not signed in"
 
     fun isSignedIn(context: Context) = SettingsStore(context).activeEmployeeId.isNotBlank() ||
         SettingsStore(context).activeEmployee.isNotBlank()
@@ -28,18 +30,33 @@ object EmployeeSession {
         ActiveUserNotification.show(context)
     }
 
-    /** Stops capture and clears the employee. Calls already captured keep uploading. */
+    /**
+     * Clears the employee. Capture keeps running: an office phone must never miss a
+     * call, so calls made until the next sign-in reach the CRM as "Not signed in".
+     */
     fun signOut(context: Context) {
         val settings = SettingsStore(context)
-        settings.shiftActive = false
-        settings.trackingStartedAt = 0L
         CallSessionStore(context).clear()
-        SyncScheduler.disableCapture(context)
-        ActiveUserNotification.cancel(context)
         settings.activeEmployee = ""
         settings.activeEmployeeId = ""
         settings.activeEmployeeEmail = ""
+        settings.shiftActive = false
+        ensureCaptureWhileSignedOut(context)
         SyncScheduler.enqueueRecordingAndSync(context, 0)
+    }
+
+    /** With nobody signed in, capture is always on (pausing is only for a signed-in employee). */
+    fun ensureCaptureWhileSignedOut(context: Context) {
+        val settings = SettingsStore(context)
+        if (!settings.onboardingComplete || isSignedIn(context)) return
+        if (!settings.shiftActive) {
+            settings.shiftActive = true
+            settings.shiftStartedAt = System.currentTimeMillis()
+            settings.trackingStartedAt = settings.shiftStartedAt
+        }
+        SyncScheduler.scheduleRecovery(context)
+        SyncScheduler.schedulePeriodicSync(context)
+        ActiveUserNotification.show(context)
     }
 
     fun recentEmployees(context: Context): List<EmployeeOption> = parse(SettingsStore(context).recentEmployeesJson)

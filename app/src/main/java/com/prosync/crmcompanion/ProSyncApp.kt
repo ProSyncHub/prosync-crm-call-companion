@@ -7,6 +7,7 @@ class ProSyncApp : Application() {
         super.onCreate()
         SyncScheduler.schedulePeriodicSync(this)
         SyncScheduler.enqueueRecordingAndSync(this, 0)
+        EmployeeSession.ensureCaptureWhileSignedOut(this)
         if (SettingsStore(this).shiftActive) {
             SyncScheduler.scheduleRecovery(this)
             ActiveUserNotification.show(this)

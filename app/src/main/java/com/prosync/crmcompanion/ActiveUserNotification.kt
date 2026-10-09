@@ -32,12 +32,16 @@ object ActiveUserNotification {
             openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val employee = settings.activeEmployee.ifBlank { "UNASSIGNED" }
+        val employee = settings.activeEmployee
+        val text = if (employee.isBlank()) "Nobody signed in • tap to sign in" else "Signed in as $employee • tap to open"
+        val details = if (employee.isBlank()) {
+            "Calls are still captured for the CRM as \"${EmployeeSession.NOT_SIGNED_IN}\". Tap to sign in with your name."
+        } else "Normal SIM calls are being captured for CRM as $employee. Tap to open the app."
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_phone_call)
             .setContentTitle("ProSync call capture is on")
-            .setContentText("Signed in as $employee • tap to open")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("Normal SIM calls are being captured for CRM as $employee. Tap to open the employee selector."))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(details))
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setShowWhen(false)

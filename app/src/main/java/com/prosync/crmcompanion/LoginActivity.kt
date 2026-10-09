@@ -43,6 +43,8 @@ class LoginActivity : AppCompatActivity() {
         if (EmployeeSession.isSignedIn(this)) {
             openMain(); return
         }
+        // Nobody signed in yet: keep capturing so no call on this phone is missed.
+        EmployeeSession.ensureCaptureWhileSignedOut(this)
         setContentView(R.layout.activity_login)
         employeeField = findViewById(R.id.loginEmployee)
         passwordField = findViewById(R.id.loginPassword)

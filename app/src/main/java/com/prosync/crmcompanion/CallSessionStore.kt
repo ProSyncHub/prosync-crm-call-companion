@@ -44,7 +44,7 @@ class CallSessionStore(context: Context) {
         val snapshot = Snapshot(
             startedAt = prefs.getLong("started_at", now),
             endedAt = now,
-            employeeName = prefs.getString("employee", "UNASSIGNED") ?: "UNASSIGNED",
+            employeeName = (prefs.getString("employee", "") ?: "").ifBlank { EmployeeSession.NOT_SIGNED_IN },
             employeeEmail = prefs.getString("employee_email", "") ?: "",
             numberHint = prefs.getString("number_hint", "")?.takeIf { it.isNotBlank() },
             expectedDirection = prefs.getString("expected_direction", "UNKNOWN") ?: "UNKNOWN"

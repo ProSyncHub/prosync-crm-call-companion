@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
     private fun confirmSignOut() {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Sign out ${settings.activeEmployee}?")
-            .setMessage("Call capture stops. Calls already captured will still upload to the CRM.")
+            .setMessage("Calls on this phone keep syncing to the CRM as \"Not signed in\" until someone signs in.")
             .setPositiveButton("Sign out") { _, _ ->
                 EmployeeSession.signOut(this)
                 startActivity(Intent(this, LoginActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK))

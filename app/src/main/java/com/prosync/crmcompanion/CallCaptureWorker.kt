@@ -19,7 +19,7 @@ class CallCaptureWorker(appContext: Context, params: WorkerParameters) : Corouti
 
         val sessionStart = inputData.getLong(KEY_SESSION_START, 0L)
         val sessionEnd = inputData.getLong(KEY_SESSION_END, 0L)
-        val employee = inputData.getString(KEY_EMPLOYEE).orEmpty().ifBlank { "UNASSIGNED" }
+        val employee = inputData.getString(KEY_EMPLOYEE).orEmpty().ifBlank { EmployeeSession.NOT_SIGNED_IN }
         val employeeEmail = inputData.getString(KEY_EMPLOYEE_EMAIL).orEmpty()
         val numberHint = inputData.getString(KEY_NUMBER_HINT)
         val expectedDirection = inputData.getString(KEY_EXPECTED_DIRECTION).orEmpty()
