@@ -49,6 +49,12 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                     if (call.directionResync) db.markDirectionResynced(call.callLogId)
                     when {
                       !needsUpload -> Unit
+                      // The CRM could not store the audio: keep the recording queued, even for
+                      // calls from unknown numbers, so it is never lost.
+                      response.recordingWarning.isNotBlank() && includeRecording -> {
+                        retryNeeded = true
+                        db.markRecordingUploadPending(call.callLogId, response.recordingWarning)
+                      }
                       response.unmatchedCallId.isNotBlank() -> {
                         db.markUnmatchedSynced(call.callLogId)
                       }

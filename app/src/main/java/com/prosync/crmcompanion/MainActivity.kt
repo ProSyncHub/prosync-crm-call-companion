@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity() {
             "No calls captured yet. Turn capture on and make a normal SIM call."
         } else latest.joinToString("\n\n") { call ->
             val sync = when {
+                call.recordingStatus == "NOT_FOUND" && call.durationSeconds > 0 -> "In CRM · no recording found (is call recording on?)"
                 call.syncStatus == "SYNCED" && call.analysisStatus == "COMPLETE" -> "In CRM · transcribing"
                 call.syncStatus == "SYNCED" -> "In CRM · processing"
                 call.syncStatus == "FAILED" -> "Will retry automatically"

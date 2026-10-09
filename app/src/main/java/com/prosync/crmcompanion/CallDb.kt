@@ -145,8 +145,9 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         }, "call_log_id = ?", arrayOf(callLogId.toString()))
     }
 
+    /** No audio on the phone. Sync once more so the CRM shows "no recording" instead of waiting forever. */
     fun markRecordingUnavailable(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply {
-        put("recording_status", "NOT_FOUND"); put("analysis_status", "NO_RECORDING")
+        put("recording_status", "NOT_FOUND"); put("analysis_status", "NO_RECORDING"); put("sync_status", "PENDING")
     }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markDirectionResynced(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("direction_resync", 0) }, "call_log_id = ?", arrayOf(callLogId.toString()))
     fun markWaitingForRecording(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply {
