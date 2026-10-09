@@ -68,6 +68,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getString("cached_employees", "[]") ?: "[]"
         set(value) = prefs.edit().putString("cached_employees", value).apply()
 
+    /** This phone's number for a SIM slot (1 or 2), typed by an admin in Settings. */
+    fun simNumber(slot: Int): String = prefs.getString("sim_number_$slot", "") ?: ""
+
+    fun setSimNumber(slot: Int, value: String) = prefs.edit().putString("sim_number_$slot", value.trim()).apply()
+
     val deviceId: String
         get() {
             val existing = prefs.getString("device_id", null)

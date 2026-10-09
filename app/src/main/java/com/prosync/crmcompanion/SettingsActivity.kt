@@ -26,6 +26,10 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private val numbersPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) detectSimNumbers() else render("Number permission was not allowed. Type the numbers instead.")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyProSyncSystemBars()
@@ -35,6 +39,15 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.saveDeviceButton).setOnClickListener {
             settings.deviceLabel = findViewById<EditText>(R.id.settingsDeviceLabel).text.toString()
             render("Device name saved ✓")
+        }
+        findViewById<Button>(R.id.saveSimButton).setOnClickListener {
+            settings.setSimNumber(1, findViewById<EditText>(R.id.settingsSim1).text.toString())
+            settings.setSimNumber(2, findViewById<EditText>(R.id.settingsSim2).text.toString())
+            render("Phone numbers saved ✓")
+        }
+        findViewById<Button>(R.id.detectSimButton).setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED) detectSimNumbers()
+            else numbersPermission.launch(Manifest.permission.READ_PHONE_NUMBERS)
         }
         findViewById<Button>(R.id.testCrmButton).setOnClickListener { testCrm() }
         findViewById<Button>(R.id.rescanButton).setOnClickListener { scanPhone() }
@@ -65,8 +78,29 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Fills empty number boxes with what Android knows (often blank on Indian SIMs). */
+    private fun detectSimNumbers() {
+        val lines = SimNumbers.lines(this)
+        var found = 0
+        lines.forEach { line ->
+            if (line.detectedNumber.isNotBlank() && settings.simNumber(line.slot).isBlank() && line.slot in 1..2) {
+                settings.setSimNumber(line.slot, line.detectedNumber); found += 1
+            }
+        }
+        render(if (found > 0) "Found $found number(s) ✓" else "This phone does not share its SIM numbers. Type them in and save.")
+    }
+
     private fun render(message: String? = null) {
         findViewById<EditText>(R.id.settingsDeviceLabel).setText(settings.deviceLabel)
+        val lines = SimNumbers.lines(this)
+        findViewById<TextView>(R.id.settingsSims).text = if (lines.isEmpty()) {
+            "No SIM details available. Type this phone's number below."
+        } else lines.joinToString("\n") { line ->
+            val number = SimNumbers.numberForSlot(this, line.slot, line).ifBlank { "number not set" }
+            "SIM ${line.slot}${if (line.carrier.isNotBlank()) " (${line.carrier})" else ""}: $number"
+        } + "\nSent with every call so the CRM shows which office line was used."
+        findViewById<EditText>(R.id.settingsSim1).setText(settings.simNumber(1))
+        findViewById<EditText>(R.id.settingsSim2).setText(settings.simNumber(2))
         findViewById<TextView>(R.id.settingsEmployee).text = if (EmployeeSession.isSignedIn(this)) {
             "Signed in as\n${settings.activeEmployee}\n${settings.activeEmployeeEmail}"
         } else "Nobody is signed in"

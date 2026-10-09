@@ -14,6 +14,12 @@
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="DEVICE NAME" android:textColor="@color/brand_orange" android:textStyle="bold" />
         <EditText android:id="@+id/settingsDeviceLabel" android:layout_width="match_parent" android:layout_height="56dp" android:hint="e.g. Abdul's Samsung" />
         <Button android:id="@+id/saveDeviceButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save device name" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="THIS PHONE'S NUMBER" android:textColor="@color/brand_orange" android:textStyle="bold" />
+        <TextView android:id="@+id/settingsSims" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
+        <EditText android:id="@+id/settingsSim1" android:layout_width="match_parent" android:layout_height="56dp" android:hint="SIM 1 number, e.g. 98765 43210" android:inputType="phone" />
+        <EditText android:id="@+id/settingsSim2" android:layout_width="match_parent" android:layout_height="56dp" android:hint="SIM 2 number (if the phone has two SIMs)" android:inputType="phone" />
+        <Button android:id="@+id/detectSimButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Detect numbers automatically" />
+        <Button android:id="@+id/saveSimButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save phone numbers" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="PERMISSIONS &amp; RECORDINGS" android:textColor="@color/brand_orange" android:textStyle="bold" />
         <TextView android:id="@+id/settingsPermissions" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />
         <TextView android:id="@+id/settingsScan" style="@style/Panel" android:layout_marginTop="8dp" android:textColor="@color/ink" />

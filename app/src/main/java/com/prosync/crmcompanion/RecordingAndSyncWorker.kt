@@ -115,6 +115,10 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                 put("device_id", call.deviceId)
                 put("device_label", call.deviceLabel)
                 put("sim_account", call.phoneAccountId ?: "")
+                // Which office line (this phone's own number) made or took the call.
+                val (simSlot, deviceNumber) = SimNumbers.numberForCall(applicationContext, call.phoneAccountId)
+                if (simSlot != null) put("sim_slot", simSlot)
+                if (deviceNumber.isNotBlank()) put("device_number", deviceNumber)
                 put("recording_status", call.recordingStatus.lowercase())
                 put("recording_file_name", call.recordingName ?: "")
                 put("recording_match_confidence", if (call.recordingUri == null) "none" else "high")
