@@ -73,6 +73,11 @@ class SettingsStore(context: Context) {
 
     fun setSimNumber(slot: Int, value: String) = prefs.edit().putString("sim_number_$slot", value.trim()).apply()
 
+    /** When calls without a recording were last re-checked. */
+    var missingRescanAt: Long
+        get() = prefs.getLong("missing_rescan_at", 0L)
+        set(value) = prefs.edit().putLong("missing_rescan_at", value).apply()
+
     val deviceId: String
         get() {
             val existing = prefs.getString("device_id", null)

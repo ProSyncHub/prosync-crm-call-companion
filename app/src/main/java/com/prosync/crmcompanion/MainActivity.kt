@@ -104,13 +104,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.recentCalls).text = if (latest.isEmpty()) {
             "No calls captured yet. Turn capture on and make a normal SIM call."
         } else latest.joinToString("\n\n") { call ->
-            val sync = when {
-                call.recordingStatus == "NOT_FOUND" && call.durationSeconds > 0 -> "In CRM · no recording found (is call recording on?)"
-                call.syncStatus == "SYNCED" && call.analysisStatus == "COMPLETE" -> "In CRM · transcribing"
-                call.syncStatus == "SYNCED" -> "In CRM · processing"
-                call.syncStatus == "FAILED" -> "Will retry automatically"
-                else -> "Queued automatically"
-            }
+            val sync = CallStatus.label(call)
             "${call.direction.lowercase().replaceFirstChar { it.uppercaseChar() }} · ${call.rawNumber.ifBlank { "Private number" }}\n${df.format(Date(call.startedAt))} · $sync"
         }
     }

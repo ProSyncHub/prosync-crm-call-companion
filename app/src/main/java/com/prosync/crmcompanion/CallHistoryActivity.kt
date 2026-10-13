@@ -64,9 +64,9 @@ class CallHistoryActivity : AppCompatActivity() {
             view.findViewById<TextView>(R.id.callNumber).text = call.rawNumber.ifBlank { "Private / unknown number" }
             view.findViewById<TextView>(R.id.callTime).text =
                 "${dateFormat.format(Date(call.startedAt))}  ·  ${call.durationSeconds}s  ·  ${call.employeeName}"
-            view.findViewById<TextView>(R.id.callRecordingState).text = recordingLabel(call)
+            view.findViewById<TextView>(R.id.callRecordingState).text = CallStatus.recordingLabel(call)
             view.findViewById<TextView>(R.id.callCrmState).apply {
-                text = crmLabel(call)
+                text = if (call.syncStatus == "SYNCED") "In CRM" else if (call.syncStatus == "FAILED") "Retrying" else "Queued"
                 backgroundTintList = ColorStateList.valueOf(
                     ContextCompat.getColor(
                         this@CallHistoryActivity,
@@ -74,7 +74,7 @@ class CallHistoryActivity : AppCompatActivity() {
                     )
                 )
             }
-            view.findViewById<TextView>(R.id.callAnalysisState).text = analysisLabel(call)
+            view.findViewById<TextView>(R.id.callAnalysisState).text = CallStatus.label(call)
             view.setOnClickListener { showDetails(call) }
             container.addView(view)
         }
@@ -87,9 +87,9 @@ class CallHistoryActivity : AppCompatActivity() {
             append("Date and time\n${dateFormat.format(Date(call.startedAt))}\n\n")
             append("Duration\n${call.durationSeconds} seconds\n\n")
             append("Employee\n${call.employeeName}\n\n")
-            append("Recording\n${recordingLabel(call)}\n\n")
-            append("CRM\n${crmLabel(call)}\n\n")
-            append("Transcript / AI\n${analysisLabel(call)}")
+            append("Recording\n${CallStatus.recordingLabel(call)}\n\n")
+            append("CRM\n${CallStatus.label(call)}")
+            call.crmMember?.let { append("\n\nMember\n$it") }
             call.recordingName?.let { append("\n\nRecording file\n$it") }
             call.syncError?.let { append("\n\nLatest detail\n$it") }
         }
@@ -97,6 +97,9 @@ class CallHistoryActivity : AppCompatActivity() {
             .setTitle("Call details")
             .setMessage(message)
             .setPositiveButton("Close", null)
+            .setNeutralButton("Change who took it") { _, _ ->
+                startActivity(android.content.Intent(this, ConfirmCallerActivity::class.java).putExtra(CallConfirmNotification.EXTRA_CALL_LOG_ID, call.callLogId))
+            }
             .show()
     }
 
@@ -107,26 +110,5 @@ class CallHistoryActivity : AppCompatActivity() {
         "REJECTED" -> "Rejected incoming call"
         "BLOCKED" -> "Blocked incoming call"
         else -> direction.lowercase().replace('_', ' ').replaceFirstChar { it.uppercaseChar() }
-    }
-
-    private fun recordingLabel(call: CallRecord) = when {
-        call.recordingUri != null -> "Recording found"
-        call.durationSeconds <= 0L -> "No recording expected"
-        call.recordingStatus == "NOT_FOUND" -> "No recording on phone"
-        else -> "Looking for recording (up to 3 h)"
-    }
-
-    private fun crmLabel(call: CallRecord) = when (call.syncStatus) {
-        "SYNCED" -> if (call.analysisStatus == "UNMATCHED") "In CRM · member unmatched" else "Synced to CRM"
-        "FAILED" -> "CRM sync failed · will retry"
-        else -> "Queued for automatic CRM sync"
-    }
-
-    private fun analysisLabel(call: CallRecord) = when {
-        call.analysisStatus == "COMPLETE" -> "Transcribing in CRM"
-        call.analysisStatus == "UNMATCHED" -> "Waiting for member match"
-        call.analysisStatus == "NO_RECORDING" || call.recordingStatus == "NOT_FOUND" || call.durationSeconds <= 0L -> "Call logged · no audio"
-        call.recordingUri == null -> "Waiting for recording"
-        else -> "Queued for transcript and AI"
     }
 }

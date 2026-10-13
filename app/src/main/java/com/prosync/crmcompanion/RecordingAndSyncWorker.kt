@@ -20,6 +20,7 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
         // off must still reach the CRM.
         if (settings.apiBaseUrl.isBlank() || settings.apiKey.isBlank()) return@withContext Result.retry()
         var retryNeeded = false
+        rescanMissingRecordings(db, settings, inputData.getBoolean(KEY_FORCE_RESCAN, false))
         db.pendingSync().forEach { original ->
             var call = original
             if (call.recordingStatus == "PENDING") {
@@ -57,6 +58,8 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                       }
                       response.unmatchedCallId.isNotBlank() -> {
                         db.markUnmatchedSynced(call.callLogId)
+                        // Still looking for its recording: come back soon, not in 15 minutes.
+                        if (call.recordingStatus == "PENDING") retryNeeded = true
                       }
                       response.recordingWarning.isNotBlank() -> {
                         retryNeeded = true
@@ -91,7 +94,38 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
                     if (needsUpload) db.markSyncFailed(call.callLogId, it.message ?: "Sync failed")
                 }
         }
+        sendStaffChanges(db, settings)
+        refreshCrmStatus(db, settings)
         if (retryNeeded) Result.retry() else Result.success()
+    }
+
+    /** Calls marked "no recording" are checked again (at most every 20 min unless forced). */
+    private fun rescanMissingRecordings(db: CallDb, settings: SettingsStore, force: Boolean) {
+        val now = System.currentTimeMillis()
+        if (!force && now - settings.missingRescanAt < 20 * 60_000L) return
+        settings.missingRescanAt = now
+        db.missingRecordings(now - 3L * 24 * 60 * 60 * 1000).forEach { call ->
+            runCatching { RecordingScanner.findForCall(applicationContext, call) }.getOrNull()?.let {
+                db.attachRecording(call.callLogId, it.uri, it.name)
+            }
+        }
+    }
+
+    private fun sendStaffChanges(db: CallDb, settings: SettingsStore) {
+        db.pendingStaffChanges().forEach { call ->
+            runCatching { CrmCallApi.setStaff(settings, call) }
+                .onSuccess { sent -> if (sent) db.clearStaffChange(call.callLogId) }
+        }
+    }
+
+    /** Asks the CRM how recent calls are doing, so both screens show the real state. */
+    private fun refreshCrmStatus(db: CallDb, settings: SettingsStore) {
+        val calls = db.recentSynced(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000)
+        if (calls.isEmpty()) return
+        val byId = calls.associateBy { CrmCallApi.sessionId(it) }
+        runCatching { CrmCallApi.statuses(settings, byId.keys.toList()) }.getOrNull()?.forEach { (id, status) ->
+            byId[id]?.let { db.setCrmState(it.callLogId, status.state, status.memberName) }
+        }
     }
 
     data class UploadResponse(
@@ -163,6 +197,10 @@ class RecordingAndSyncWorker(appContext: Context, params: WorkerParameters) : Co
             val detail = runCatching { connection.errorStream?.bufferedReader()?.readText().orEmpty() }.getOrDefault("")
             throw IllegalStateException("CRM analyze returned HTTP $response${if (detail.isBlank()) "" else ": ${detail.take(240)}"}")
         }
+    }
+
+    companion object {
+        const val KEY_FORCE_RESCAN = "force_rescan"
     }
 }
 

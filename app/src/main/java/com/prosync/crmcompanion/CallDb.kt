@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", null, 6) {
+class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", null, 7) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -35,6 +35,9 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
               sync_error TEXT,
               analysis_status TEXT NOT NULL DEFAULT 'PENDING',
               direction_resync INTEGER NOT NULL DEFAULT 0,
+              crm_state TEXT,
+              crm_member TEXT,
+              staff_change_pending INTEGER NOT NULL DEFAULT 0,
               created_at INTEGER NOT NULL
             )
             """.trimIndent()
@@ -60,7 +63,49 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
             // blocked the sync queue. Release them.
             db.execSQL("UPDATE calls SET recording_status = 'NOT_FOUND' WHERE recording_status = 'PENDING' AND duration_seconds <= 0")
         }
+        if (oldVersion < 7) {
+            db.execSQL("ALTER TABLE calls ADD COLUMN crm_state TEXT")
+            db.execSQL("ALTER TABLE calls ADD COLUMN crm_member TEXT")
+            db.execSQL("ALTER TABLE calls ADD COLUMN staff_change_pending INTEGER NOT NULL DEFAULT 0")
+        }
     }
+
+    /** Synced calls since a time whose CRM state may still change (for the status refresh). */
+    fun recentSynced(sinceMillis: Long, limit: Int = 100): List<CallRecord> = query(
+        "sync_status = 'SYNCED' AND started_at >= ? AND (crm_state IS NULL OR crm_state NOT IN ('transcribed','no_recording','no_speech','ignored'))",
+        arrayOf(sinceMillis.toString()), limit
+    )
+
+    /** Answered calls with no recording found, to look again (recorders and the media index can be slow). */
+    fun missingRecordings(sinceMillis: Long, limit: Int = 30): List<CallRecord> = query(
+        "recording_status = 'NOT_FOUND' AND recording_uri IS NULL AND duration_seconds > 0 AND started_at >= ?",
+        arrayOf(sinceMillis.toString()), limit
+    )
+
+    fun pendingStaffChanges(): List<CallRecord> = query("staff_change_pending = 1 AND sync_status = 'SYNCED'", emptyArray(), 50)
+
+    private fun query(where: String, args: Array<String>, limit: Int): List<CallRecord> {
+        val rows = mutableListOf<CallRecord>()
+        readableDatabase.query("calls", null, where, args, null, null, "started_at DESC", limit.toString()).use { c ->
+            while (c.moveToNext()) rows += c.toRecord()
+        }
+        return rows
+    }
+
+    fun setCrmState(callLogId: Long, state: String, member: String?) = writableDatabase.update("calls", ContentValues().apply {
+        put("crm_state", state); put("crm_member", member)
+    }, "call_log_id = ?", arrayOf(callLogId.toString()))
+
+    /** "Who took this call?" on the phone. Already in the CRM: flag it so the worker sends the change. */
+    fun changeEmployee(callLogId: Long, name: String, email: String) {
+        val synced = find(callLogId)?.syncStatus == "SYNCED"
+        writableDatabase.update("calls", ContentValues().apply {
+            put("employee_name", name); put("employee_email", email)
+            if (synced) put("staff_change_pending", 1)
+        }, "call_log_id = ?", arrayOf(callLogId.toString()))
+    }
+
+    fun clearStaffChange(callLogId: Long) = writableDatabase.update("calls", ContentValues().apply { put("staff_change_pending", 0) }, "call_log_id = ?", arrayOf(callLogId.toString()))
 
     fun exists(callLogId: Long): Boolean {
         readableDatabase.rawQuery(
@@ -193,7 +238,10 @@ class CallDb(context: Context) : SQLiteOpenHelper(context, "prosync_calls.db", n
         recordingStatus = getString(getColumnIndexOrThrow("recording_status")), syncStatus = getString(getColumnIndexOrThrow("sync_status")),
         syncError = stringOrNull("sync_error"),
         analysisStatus = getString(getColumnIndexOrThrow("analysis_status")),
-        directionResync = getInt(getColumnIndexOrThrow("direction_resync")) == 1
+        directionResync = getInt(getColumnIndexOrThrow("direction_resync")) == 1,
+        crmState = stringOrNull("crm_state"),
+        crmMember = stringOrNull("crm_member"),
+        staffChangePending = getInt(getColumnIndexOrThrow("staff_change_pending")) == 1
     )
 
     private fun Cursor.stringOrNull(name: String): String? {

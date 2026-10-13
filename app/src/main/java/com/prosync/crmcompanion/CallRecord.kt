@@ -23,5 +23,10 @@ data class CallRecord(
     val syncStatus: String = "PENDING",
     val syncError: String? = null,
     val analysisStatus: String = "PENDING",
-    val directionResync: Boolean = false
+    val directionResync: Boolean = false,
+    /** What the CRM last reported: transcribed, transcribing, no_recording, ... (null = not asked yet). */
+    val crmState: String? = null,
+    val crmMember: String? = null,
+    /** Who took the call was changed on the phone after the call reached the CRM. */
+    val staffChangePending: Boolean = false
 )

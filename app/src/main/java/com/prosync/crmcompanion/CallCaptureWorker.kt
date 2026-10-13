@@ -66,6 +66,8 @@ class CallCaptureWorker(appContext: Context, params: WorkerParameters) : Corouti
         )
 
         SyncScheduler.enqueueRecordingAndSync(applicationContext)
+        SyncScheduler.enqueueRecordingChecks(applicationContext)
+        db.find(call.id)?.let { CallConfirmNotification.show(applicationContext, it) }
 
         Result.success()
     }

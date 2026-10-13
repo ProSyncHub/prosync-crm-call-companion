@@ -137,6 +137,7 @@ class SettingsActivity : AppCompatActivity() {
                     settings.recordingScanSummary = it.summary()
                     render()
                     SyncScheduler.enqueueRecordingAndSync(this@SettingsActivity, 0)
+                    SyncScheduler.enqueueMissingRescan(this@SettingsActivity)
                 }
                 .onFailure { status.text = "Scan failed: ${it.message}" }
         }

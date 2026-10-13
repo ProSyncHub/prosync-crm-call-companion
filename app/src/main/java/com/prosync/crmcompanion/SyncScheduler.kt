@@ -95,6 +95,26 @@ object SyncScheduler {
         )
     }
 
+    /** Recorders and the media index finish a little after the call: look again at 30 s, 2 min and 6 min. */
+    fun enqueueRecordingChecks(context: Context) {
+        listOf(30L, 120L, 360L).forEach { seconds ->
+            val request = OneTimeWorkRequestBuilder<RecordingAndSyncWorker>()
+                .setInitialDelay(seconds, TimeUnit.SECONDS)
+                .addTag(SYNC_WORK_TAG)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("prosync_recheck_$seconds", ExistingWorkPolicy.REPLACE, request)
+        }
+    }
+
+    /** "Scan phone again": look for every missing recording of the last 3 days right now. */
+    fun enqueueMissingRescan(context: Context) {
+        val request = OneTimeWorkRequestBuilder<RecordingAndSyncWorker>()
+            .setInputData(Data.Builder().putBoolean(RecordingAndSyncWorker.KEY_FORCE_RESCAN, true).build())
+            .addTag(SYNC_WORK_TAG)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork("prosync_missing_rescan", ExistingWorkPolicy.REPLACE, request)
+    }
+
     fun disableCapture(context: Context) {
         WorkManager.getInstance(context).cancelAllWorkByTag(CAPTURE_WORK_TAG)
         WorkManager.getInstance(context).cancelUniqueWork("prosync_call_recovery")

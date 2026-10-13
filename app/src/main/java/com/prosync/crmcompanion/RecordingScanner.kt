@@ -35,7 +35,12 @@ object RecordingScanner {
         if (call.durationSeconds <= 0L) return null
         val candidates = mediaStoreCandidates(context, call).toMutableList()
         val folderUri = SettingsStore(context).recordingFolderUri
-        if (folderUri.isNotBlank()) candidates += documentTreeCandidates(context, Uri.parse(folderUri))
+        if (folderUri.isNotBlank()) {
+            // Only files written around the call: reading every file's length is what made scans slow.
+            val from = call.startedAt - 20 * 60_000L
+            val to = call.startedAt + call.durationSeconds * 1000L + 30 * 60_000L
+            candidates += documentTreeCandidates(context, Uri.parse(folderUri), from, to)
+        }
 
         val expectedEnd = call.startedAt + call.durationSeconds * 1000L
         val expectedDuration = call.durationSeconds * 1000L
@@ -87,10 +92,10 @@ object RecordingScanner {
         return candidates
     }
 
-    private fun documentTreeCandidates(context: Context, treeUri: Uri): List<Recording> {
+    private fun documentTreeCandidates(context: Context, treeUri: Uri, from: Long, to: Long): List<Recording> {
         val results = mutableListOf<Recording>()
         val rootId = runCatching { DocumentsContract.getTreeDocumentId(treeUri) }.getOrNull() ?: return results
-        scanDocumentChildren(context, treeUri, rootId, results, 0)
+        scanDocumentChildren(context, treeUri, rootId, results, 0, from, to)
         return results
     }
 
@@ -99,7 +104,9 @@ object RecordingScanner {
         treeUri: Uri,
         parentId: String,
         results: MutableList<Recording>,
-        depth: Int
+        depth: Int,
+        from: Long,
+        to: Long
     ) {
         if (depth > 3 || results.size >= 500) return
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
@@ -120,13 +127,15 @@ object RecordingScanner {
                     val name = cursor.getString(nameIndex).orEmpty()
                     val mime = cursor.getString(mimeIndex).orEmpty()
                     if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
-                        scanDocumentChildren(context, treeUri, documentId, results, depth + 1)
+                        scanDocumentChildren(context, treeUri, documentId, results, depth + 1, from, to)
                     } else if (mime.startsWith("audio/") || isAudioName(name)) {
+                        val modified = if (cursor.isNull(modifiedIndex)) 0L else cursor.getLong(modifiedIndex)
+                        if (modified > 0L && (modified < from || modified > to)) continue
                         val documentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
                         results += Recording(
                             documentUri.toString(),
                             name,
-                            if (cursor.isNull(modifiedIndex)) 0L else cursor.getLong(modifiedIndex),
+                            modified,
                             readDuration(context, documentUri),
                             documentId,
                             true
