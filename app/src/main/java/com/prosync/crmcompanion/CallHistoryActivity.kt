@@ -11,6 +11,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -38,8 +42,27 @@ class CallHistoryActivity : AppCompatActivity() {
 
     override fun onPause() { handler.removeCallbacks(refreshLoop); super.onPause() }
 
+    private var loading = false
+    private var shown: List<String>? = null
+
+    /**
+     * Loads in the background and rebuilds the list only when something changed. It used to
+     * rebuild 250 rows on the main thread every 2 s, which made the app lag and taps miss.
+     */
     private fun renderCalls() {
-        val calls = CallDb(this).latest(250)
+        if (loading) return
+        loading = true
+        lifecycleScope.launch {
+            val calls = withContext(Dispatchers.IO) { CallDb(this@CallHistoryActivity).latest(150) }
+            loading = false
+            val signature = calls.map { "${it.callLogId}|${it.syncStatus}|${it.recordingUri}|${it.employeeName}|${CallStatus.label(it)}" }
+            if (isFinishing || signature == shown) return@launch
+            shown = signature
+            showCalls(calls)
+        }
+    }
+
+    private fun showCalls(calls: List<CallRecord>) {
         val container = findViewById<LinearLayout>(R.id.callHistoryContainer)
         container.removeAllViews()
         val synced = calls.count { it.syncStatus == "SYNCED" }

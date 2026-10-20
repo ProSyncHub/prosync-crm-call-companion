@@ -2,7 +2,8 @@ package com.prosync.crmcompanion
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputType
+import android.text.method.HideReturnsTransformationMethod
+import android.text.method.PasswordTransformationMethod
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.inputmethod.EditorInfo
@@ -19,7 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Everyday sign-in: pick your name, enter your password, done. */
+/** Everyday sign-in: tap your name, then fingerprint or PIN (or the password the first time). */
 class LoginActivity : AppCompatActivity() {
     private lateinit var settings: SettingsStore
     private lateinit var employeeField: AutoCompleteTextView
@@ -77,6 +78,15 @@ class LoginActivity : AppCompatActivity() {
         showEmployees(EmployeeSession.cachedEmployees(this))
         renderRecent()
         refreshEmployees()
+        if (savedInstanceState == null) offerOneTouch()
+    }
+
+    /** One person set up fingerprint on this phone: ask for it straight away, no name tap. */
+    private fun offerOneTouch() {
+        val ids = QuickSignInStore.fingerprintEmployeeIds(this)
+        if (ids.size != 1 || !QuickSignInStore.fingerprintAvailable(this)) return
+        val pool = EmployeeSession.recentEmployees(this) + EmployeeSession.cachedEmployees(this)
+        pool.firstOrNull { it.id == ids[0] }?.let { employeeField.post { if (!isFinishing) choose(it) } }
     }
 
     private fun showEmployees(list: List<EmployeeOption>) {
@@ -151,6 +161,17 @@ class LoginActivity : AppCompatActivity() {
         employeeField.setText(employee.name, false)
         employeeField.dismissDropDown()
         status.text = ""
+        if (QuickSignInStore.hasQuickSignIn(this, employee.id)) {
+            QuickAuth.confirm(this, employee, "Sign in", onUsePassword = { focusPassword() }) { verified ->
+                EmployeeSession.signIn(this, verified)
+                openMain()
+            }
+        } else {
+            focusPassword()
+        }
+    }
+
+    private fun focusPassword() {
         passwordField.requestFocus()
         getSystemService(InputMethodManager::class.java)?.showSoftInput(passwordField, InputMethodManager.SHOW_IMPLICIT)
     }
@@ -190,7 +211,8 @@ class LoginActivity : AppCompatActivity() {
                 .onSuccess {
                     passwordField.setText("")
                     EmployeeSession.signIn(this@LoginActivity, it)
-                    openMain()
+                    // First password sign-in on this phone: offer a PIN and fingerprint for next time.
+                    QuickAuth.offerSetup(this@LoginActivity, it, password) { openMain() }
                 }
                 .onFailure {
                     status.setTextColor(ContextCompat.getColor(this@LoginActivity, R.color.capture_off))
@@ -207,9 +229,9 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun togglePassword(toggle: TextView) {
-        val showing = passwordField.inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD != 0
-        passwordField.inputType = InputType.TYPE_CLASS_TEXT or
-            if (showing) InputType.TYPE_TEXT_VARIATION_PASSWORD else InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        // The old check (inputType and VISIBLE_PASSWORD != 0) was always true, so it never showed.
+        val showing = passwordField.transformationMethod !is PasswordTransformationMethod
+        passwordField.transformationMethod = if (showing) PasswordTransformationMethod.getInstance() else HideReturnsTransformationMethod.getInstance()
         passwordField.setSelection(passwordField.text.length)
         toggle.text = if (showing) "Show" else "Hide"
     }

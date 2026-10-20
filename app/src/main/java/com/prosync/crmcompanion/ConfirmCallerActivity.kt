@@ -14,16 +14,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** "Who took this call?": pick the right person; the CRM is updated (and audit-logged). */
+/**
+ * "Who took this call?": pick the right person; the CRM is updated (and audit-logged).
+ * Picking someone other than the person signed in asks for their fingerprint, PIN or password,
+ * so nobody can put a call under another person's name.
+ */
 class ConfirmCallerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyProSyncSystemBars()
         val callLogId = intent.getLongExtra(CallConfirmNotification.EXTRA_CALL_LOG_ID, -1L)
-        val call = CallDb(this).find(callLogId)
-        if (call == null) { finish(); return }
         CallConfirmNotification.cancel(this, callLogId)
+        lifecycleScope.launch {
+            val call = withContext(Dispatchers.IO) { CallDb(this@ConfirmCallerActivity).find(callLogId) }
+            if (call == null) finish() else render(call)
+        }
+    }
 
+    private fun render(call: CallRecord) {
         val pad = dp(20)
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, pad) }
         list.addView(TextView(this).apply {
@@ -38,10 +46,21 @@ class ConfirmCallerActivity : AppCompatActivity() {
             setPadding(0, dp(6), 0, dp(14))
         })
 
+        val signedInId = SettingsStore(this).activeEmployeeId
         val recent = EmployeeSession.recentEmployees(this)
         val everyone = (recent + EmployeeSession.cachedEmployees(this).sortedBy { it.name.lowercase() })
             .distinctBy { it.email.lowercase() }
-        everyone.forEach { person -> list.addView(choice("${person.name} · ${person.department}") { save(call, person.name, person.email) }) }
+        everyone.forEach { person ->
+            list.addView(choice("${person.name} · ${person.department}") {
+                if (person.id == signedInId) {
+                    save(call, person.name, person.email)
+                } else {
+                    QuickAuth.confirm(this, person, "Confirm it was you", onUsePassword = null) { verified ->
+                        save(call, verified.name, verified.email)
+                    }
+                }
+            })
+        }
         list.addView(choice("Someone not in the list / not sure") { save(call, EmployeeSession.NOT_SIGNED_IN, "") })
         list.addView(Button(this).apply { text = "Cancel"; setOnClickListener { finish() } })
 

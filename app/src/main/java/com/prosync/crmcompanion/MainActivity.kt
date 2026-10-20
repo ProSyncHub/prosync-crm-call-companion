@@ -9,6 +9,10 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -86,8 +90,24 @@ class MainActivity : AppCompatActivity() {
         render()
     }
 
+    private var loading = false
+
+    /** Reads the call database in the background (it used to run on the main thread every 2 s). */
     private fun render() {
-        val db = CallDb(this); val latest = db.latest(3)
+        renderStatus()
+        if (loading) return
+        loading = true
+        lifecycleScope.launch {
+            val stats = withContext(Dispatchers.IO) {
+                val db = CallDb(this@MainActivity)
+                Triple(db.count(), db.pendingCount(), db.latest(3))
+            }
+            loading = false
+            if (!isFinishing) renderCalls(stats.first, stats.second, stats.third)
+        }
+    }
+
+    private fun renderStatus() {
         findViewById<TextView>(R.id.employeeHeader).text = "Calls sync to CRM automatically"
         findViewById<TextView>(R.id.signedInName).text = settings.activeEmployee
         findViewById<TextView>(R.id.captureStatus).apply {
@@ -98,8 +118,11 @@ class MainActivity : AppCompatActivity() {
             text = if (settings.shiftActive) "Pause capture" else "Resume capture"
             backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, if (settings.shiftActive) R.color.capture_off else R.color.capture_on))
         }
-        findViewById<TextView>(R.id.totalCalls).text = db.count().toString()
-        findViewById<TextView>(R.id.pendingCalls).text = db.pendingCount().toString()
+    }
+
+    private fun renderCalls(total: Int, pending: Int, latest: List<CallRecord>) {
+        findViewById<TextView>(R.id.totalCalls).text = total.toString()
+        findViewById<TextView>(R.id.pendingCalls).text = pending.toString()
         val df = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
         findViewById<TextView>(R.id.recentCalls).text = if (latest.isEmpty()) {
             "No calls captured yet. Turn capture on and make a normal SIM call."
